@@ -63,6 +63,20 @@ GitLab-sourced and a GitHub-sourced lane, fully offline.
 
 All VCS calls happen **server-side**, so tokens never reach the browser.
 
+### Self-hosted GitLab / GitHub Enterprise
+
+The API base URLs default to `gitlab.com` and `api.github.com`. To point at a
+self-hosted instance, set the override env var in `.env.local` (no config edit
+needed) — note the API path suffix:
+
+```bash
+GITLAB_API_URL=https://gitlab.example.com/api/v4   # self-hosted GitLab
+GITHUB_API_URL=https://github.example.com/api/v3   # GitHub Enterprise Server
+```
+
+Deep links use each milestone's own `web_url` / `html_url` from the API, so they
+resolve back to the right instance automatically.
+
 ## Data model
 
 Two kinds of state in separate files so a re-sync never clobbers hand-authored config:

@@ -4,6 +4,7 @@ import path from "node:path";
 import { mapGitlabMilestone, mapGitlabIssues, type GitlabMilestoneRaw, type GitlabIssueRaw } from "./gitlab";
 import { mapGithubMilestone, mapGithubIssues, type GithubMilestoneRaw, type GithubIssueRaw } from "./github";
 import { MockProvider, type GitlabFixture, type GithubFixture } from "./mock";
+import { resolveApiBaseUrl } from "./index";
 
 const root = process.cwd();
 const gitlabFixture = JSON.parse(
@@ -53,6 +54,33 @@ describe("github mappers", () => {
     ];
     expect(mapGithubIssues(withPr)).toHaveLength(1);
     expect(mapGithubIssues(withPr)[0].title).toBe("real issue");
+  });
+});
+
+describe("resolveApiBaseUrl (alternative / self-hosted instances)", () => {
+  const gitlab = { apiBaseUrl: "https://gitlab.com/api/v4", apiBaseUrlEnv: "GITLAB_API_URL" };
+
+  it("uses the configured default when no override env is set", () => {
+    expect(resolveApiBaseUrl(gitlab, {})).toBe("https://gitlab.com/api/v4");
+  });
+
+  it("uses the env override for a self-hosted instance", () => {
+    expect(resolveApiBaseUrl(gitlab, { GITLAB_API_URL: "https://gitlab.example.com/api/v4" })).toBe(
+      "https://gitlab.example.com/api/v4"
+    );
+  });
+
+  it("trims trailing slashes and ignores blank overrides", () => {
+    expect(resolveApiBaseUrl(gitlab, { GITLAB_API_URL: "https://gl.example.com/api/v4/" })).toBe(
+      "https://gl.example.com/api/v4"
+    );
+    expect(resolveApiBaseUrl(gitlab, { GITLAB_API_URL: "  " })).toBe("https://gitlab.com/api/v4");
+  });
+
+  it("falls back to default when no apiBaseUrlEnv is configured", () => {
+    expect(resolveApiBaseUrl({ apiBaseUrl: "https://api.github.com" }, { GITLAB_API_URL: "x" })).toBe(
+      "https://api.github.com"
+    );
   });
 });
 

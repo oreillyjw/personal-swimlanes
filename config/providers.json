@@ -3,11 +3,13 @@
     "gitlab": {
       "id": "gitlab",
       "apiBaseUrl": "https://gitlab.com/api/v4",
+      "apiBaseUrlEnv": "GITLAB_API_URL",
       "tokenEnv": "GITLAB_TOKEN"
     },
     "github": {
       "id": "github",
       "apiBaseUrl": "https://api.github.com",
+      "apiBaseUrlEnv": "GITHUB_API_URL",
       "tokenEnv": "GITHUB_TOKEN"
     }
   }

@@ -8,15 +8,21 @@ import { loadMockProvider } from "./mock";
 
 export type { VcsProvider, MilestoneLive, IssueLive, MilestoneRef } from "./types";
 
+const providerConfigSchema = z.object({
+  id: z.string(),
+  /** Default API base URL (e.g. https://gitlab.com/api/v4). */
+  apiBaseUrl: z.string().url(),
+  /**
+   * Optional env var that overrides apiBaseUrl at runtime — point at a
+   * self-hosted GitLab or GitHub Enterprise instance without editing config.
+   */
+  apiBaseUrlEnv: z.string().optional(),
+  tokenEnv: z.string(),
+});
+type ProviderConfig = z.infer<typeof providerConfigSchema>;
+
 const providersConfigSchema = z.object({
-  providers: z.record(
-    z.string(),
-    z.object({
-      id: z.string(),
-      apiBaseUrl: z.string().url(),
-      tokenEnv: z.string(),
-    })
-  ),
+  providers: z.record(z.string(), providerConfigSchema),
 });
 
 export type BoardProviderId = "gitlab" | "github";
@@ -24,6 +30,20 @@ export type BoardProviderId = "gitlab" | "github";
 export function isSimulated(): boolean {
   // SIMULATE defaults to ON: only the explicit string "false" turns it off.
   return process.env.SIMULATE !== "false";
+}
+
+/**
+ * Resolve a provider's effective API base URL: the apiBaseUrlEnv override if set
+ * and non-empty, otherwise the configured default. Trailing slashes are trimmed
+ * so URL joins are predictable.
+ */
+export function resolveApiBaseUrl(
+  pc: Pick<ProviderConfig, "apiBaseUrl" | "apiBaseUrlEnv">,
+  env: Record<string, string | undefined> = process.env
+): string {
+  const override = pc.apiBaseUrlEnv ? env[pc.apiBaseUrlEnv]?.trim() : undefined;
+  const url = override && override.length > 0 ? override : pc.apiBaseUrl;
+  return url.replace(/\/+$/, "");
 }
 
 /**
@@ -56,10 +76,11 @@ export async function getProviderResolver(): Promise<(provider: BoardProviderId)
       );
     }
 
+    const apiBaseUrl = resolveApiBaseUrl(pc);
     const instance: VcsProvider =
       provider === "gitlab"
-        ? new GitlabProvider(pc.apiBaseUrl, token)
-        : new GithubProvider(pc.apiBaseUrl, token);
+        ? new GitlabProvider(apiBaseUrl, token)
+        : new GithubProvider(apiBaseUrl, token);
     cache.set(provider, instance);
     return instance;
   };
