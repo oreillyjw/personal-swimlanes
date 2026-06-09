@@ -73,12 +73,28 @@ Two kinds of state in separate files so a re-sync never clobbers hand-authored c
 | `data/board.json` | Your working board config | ❌ gitignored |
 | `data/synced.json` | Disposable cache written by **Sync now** (live milestone + issue values) | ❌ gitignored |
 | `config/providers.json` | Non-secret provider config (API base URLs) | ✅ |
-| `fixtures/gitlab.sim.json`, `fixtures/github.sim.json` | Simulated milestones + issues, shaped like the real APIs | ✅ |
+| `fixtures/gitlab.sim.json`, `fixtures/github.sim.json` | Fictional simulated milestones + issues, shaped like the real APIs | ✅ |
+| `fixtures/*.local.json` | Optional private fixture overlay for simulating your own board offline | ❌ gitignored |
 | `.env.local` | Tokens + `SIMULATE` | ❌ gitignored |
 
 At render time the app **merges** `synced.json` over `board.json`: live values win
 where a `sourceRef` resolves, hand-authored values are the fallback. Works with
 zero sync (pure local planning) and accurate with live progress once mapped.
+
+### Keep your real board private
+
+Everything committed to this repo is **fictional** — the sample board and the
+`*.sim.json` fixtures. Your real board lives only in gitignored files that are
+never pushed:
+
+- Put your real lanes/milestones in `data/board.json` (gitignored).
+- To **simulate** a private board offline (e.g. with real repo names, before
+  wiring tokens), drop `fixtures/gitlab.local.json` and/or
+  `fixtures/github.local.json` (same shape as the `*.sim.json` files). The
+  `MockProvider` overlays them on top of the committed fictional fixtures —
+  entries in the overlay win — so **Sync now** fills in your board with no
+  network and nothing leaves your machine. Going live (`SIMULATE=false`) needs
+  no fixtures at all.
 
 Files are validated with `zod` on load and fail loudly. All disk access is behind
 a small `Store` interface (`JsonFileStore`) — swap storage later by adding one

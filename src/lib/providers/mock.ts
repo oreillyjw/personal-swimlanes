@@ -89,10 +89,36 @@ export class MockProvider implements VcsProvider {
 
 const FIXTURES_DIR = path.join(process.cwd(), "fixtures");
 
+async function readJsonIfExists<T>(file: string): Promise<T | null> {
+  try {
+    return JSON.parse(await fs.readFile(file, "utf8")) as T;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+}
+
+/**
+ * Load committed fictional fixtures, then overlay an optional gitignored
+ * `*.local.json` of the same shape if present (project/repo entries in the
+ * overlay win). This lets a private board (e.g. real repo names) be simulated
+ * offline without ever committing it — the public repo only ships the fictional
+ * fixtures.
+ */
 export async function loadMockProvider(): Promise<MockProvider> {
-  const [gitlabRaw, githubRaw] = await Promise.all([
-    fs.readFile(path.join(FIXTURES_DIR, "gitlab.sim.json"), "utf8"),
-    fs.readFile(path.join(FIXTURES_DIR, "github.sim.json"), "utf8"),
+  const [gitlabBase, githubBase, gitlabLocal, githubLocal] = await Promise.all([
+    fs.readFile(path.join(FIXTURES_DIR, "gitlab.sim.json"), "utf8").then((s) => JSON.parse(s) as GitlabFixture),
+    fs.readFile(path.join(FIXTURES_DIR, "github.sim.json"), "utf8").then((s) => JSON.parse(s) as GithubFixture),
+    readJsonIfExists<GitlabFixture>(path.join(FIXTURES_DIR, "gitlab.local.json")),
+    readJsonIfExists<GithubFixture>(path.join(FIXTURES_DIR, "github.local.json")),
   ]);
-  return new MockProvider(JSON.parse(gitlabRaw) as GitlabFixture, JSON.parse(githubRaw) as GithubFixture);
+
+  const gitlab: GitlabFixture = gitlabLocal
+    ? { projects: { ...gitlabBase.projects, ...gitlabLocal.projects } }
+    : gitlabBase;
+  const github: GithubFixture = githubLocal
+    ? { repos: { ...githubBase.repos, ...githubLocal.repos } }
+    : githubBase;
+
+  return new MockProvider(gitlab, github);
 }

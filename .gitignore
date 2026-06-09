@@ -35,3 +35,7 @@ yarn-error.log*
 /data/board.json
 # Disposable live-sync cache (may hold real milestone/issue data).
 /data/synced.json
+
+# Local fixture overlay for simulating a private board offline (e.g. real repo
+# names). Merged over the committed fictional fixtures by the MockProvider.
+/fixtures/*.local.json
