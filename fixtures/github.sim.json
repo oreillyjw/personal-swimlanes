@@ -1,0 +1,370 @@
+{
+  "repos": {
+    "acme/platform": {
+      "milestones": {
+        "1": {
+          "number": 1,
+          "title": "Requirements & Data Mapping",
+          "description": "Define data model and field mapping",
+          "due_on": "2026-07-03T00:00:00Z",
+          "state": "open",
+          "open_issues": 4,
+          "closed_issues": 2,
+          "html_url": "https://github.com/acme/platform/milestone/1"
+        },
+        "2": {
+          "number": 2,
+          "title": "Build & Integration",
+          "description": "Implement integrations between systems",
+          "due_on": "2026-08-07T00:00:00Z",
+          "state": "open",
+          "open_issues": 5,
+          "closed_issues": 0,
+          "html_url": "https://github.com/acme/platform/milestone/2"
+        },
+        "3": {
+          "number": 3,
+          "title": "Content & Data Migration",
+          "description": "Migrate catalog/content, set up redirects",
+          "due_on": "2026-09-04T00:00:00Z",
+          "state": "open",
+          "open_issues": 4,
+          "closed_issues": 0,
+          "html_url": "https://github.com/acme/platform/milestone/3"
+        },
+        "4": {
+          "number": 4,
+          "title": "UAT & Performance Testing",
+          "description": "End-to-end UAT, load tests",
+          "due_on": "2026-09-25T00:00:00Z",
+          "state": "open",
+          "open_issues": 3,
+          "closed_issues": 0,
+          "html_url": "https://github.com/acme/platform/milestone/4"
+        },
+        "5": {
+          "number": 5,
+          "title": "Soft Launch / Staged Rollout",
+          "description": "Limited traffic, monitor",
+          "due_on": "2026-10-06T00:00:00Z",
+          "state": "open",
+          "open_issues": 3,
+          "closed_issues": 0,
+          "html_url": "https://github.com/acme/platform/milestone/5"
+        },
+        "6": {
+          "number": 6,
+          "title": "PLATFORM LAUNCH",
+          "description": "Full traffic cutover to the new platform",
+          "due_on": "2026-10-15T00:00:00Z",
+          "state": "open",
+          "open_issues": 2,
+          "closed_issues": 0,
+          "html_url": "https://github.com/acme/platform/milestone/6"
+        }
+      },
+      "issues": {
+        "1": [
+          {
+            "title": "Gather migration requirements",
+            "state": "closed",
+            "html_url": "https://github.com/acme/platform/issues/201"
+          },
+          {
+            "title": "Inventory legacy data model",
+            "state": "closed",
+            "html_url": "https://github.com/acme/platform/issues/202"
+          },
+          {
+            "title": "Draft field mapping spec",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/203"
+          },
+          {
+            "title": "Define redirect strategy",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/204"
+          },
+          {
+            "title": "Review mapping with stakeholders",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/205"
+          },
+          {
+            "title": "Sign off on scope",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/206"
+          }
+        ],
+        "2": [
+          {
+            "title": "Build source connector",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/207"
+          },
+          {
+            "title": "Build target connector",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/208"
+          },
+          {
+            "title": "Implement transformation layer",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/209"
+          },
+          {
+            "title": "Wire up auth between systems",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/210"
+          },
+          {
+            "title": "Integration test harness",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/211"
+          }
+        ],
+        "3": [
+          {
+            "title": "Migrate catalog content",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/212"
+          },
+          {
+            "title": "Migrate media assets",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/213"
+          },
+          {
+            "title": "Configure URL redirects",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/214"
+          },
+          {
+            "title": "Validate migrated content",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/215"
+          }
+        ],
+        "4": [
+          {
+            "title": "Define UAT scenarios",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/216"
+          },
+          {
+            "title": "Run end-to-end UAT",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/217"
+          },
+          {
+            "title": "Execute load tests",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/218"
+          }
+        ],
+        "5": [
+          {
+            "title": "Enable 5% traffic",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/219"
+          },
+          {
+            "title": "Monitor error budgets",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/220"
+          },
+          {
+            "title": "Ramp to 25% traffic",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/221"
+          }
+        ],
+        "6": [
+          {
+            "title": "Cut over 100% traffic",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/222"
+          },
+          {
+            "title": "Decommission legacy platform",
+            "state": "open",
+            "html_url": "https://github.com/acme/platform/issues/223"
+          }
+        ]
+      }
+    },
+    "acme/cicd": {
+      "milestones": {
+        "10": {
+          "number": 10,
+          "title": "Runners & Pipeline Setup",
+          "description": "Build agents, registry, base pipelines",
+          "due_on": "2026-06-20T00:00:00Z",
+          "state": "open",
+          "open_issues": 2,
+          "closed_issues": 4,
+          "html_url": "https://github.com/acme/cicd/milestone/10"
+        },
+        "11": {
+          "number": 11,
+          "title": "Migrate Priority Jobs",
+          "description": "Port the highest-value scheduled jobs",
+          "due_on": "2026-07-03T00:00:00Z",
+          "state": "open",
+          "open_issues": 3,
+          "closed_issues": 1,
+          "html_url": "https://github.com/acme/cicd/milestone/11"
+        },
+        "12": {
+          "number": 12,
+          "title": "Fix Concurrency / Reliability",
+          "description": "Resolve race conditions across workers",
+          "due_on": "2026-07-17T00:00:00Z",
+          "state": "open",
+          "open_issues": 4,
+          "closed_issues": 0,
+          "html_url": "https://github.com/acme/cicd/milestone/12"
+        },
+        "13": {
+          "number": 13,
+          "title": "Parallel Run vs Legacy",
+          "description": "Validate output parity",
+          "due_on": "2026-07-24T00:00:00Z",
+          "state": "open",
+          "open_issues": 2,
+          "closed_issues": 0,
+          "html_url": "https://github.com/acme/cicd/milestone/13"
+        },
+        "14": {
+          "number": 14,
+          "title": "Decommission Legacy Scheduler",
+          "description": "Cutover, retire old schedulers",
+          "due_on": "2026-07-29T00:00:00Z",
+          "state": "open",
+          "open_issues": 2,
+          "closed_issues": 0,
+          "html_url": "https://github.com/acme/cicd/milestone/14"
+        },
+        "15": {
+          "number": 15,
+          "title": "CI/CD FULLY LIVE",
+          "description": "All jobs on the new platform, legacy retired",
+          "due_on": "2026-07-31T00:00:00Z",
+          "state": "open",
+          "open_issues": 1,
+          "closed_issues": 0,
+          "html_url": "https://github.com/acme/cicd/milestone/15"
+        }
+      },
+      "issues": {
+        "10": [
+          {
+            "title": "Provision build runners",
+            "state": "closed",
+            "html_url": "https://github.com/acme/cicd/issues/224"
+          },
+          {
+            "title": "Set up artifact registry",
+            "state": "closed",
+            "html_url": "https://github.com/acme/cicd/issues/225"
+          },
+          {
+            "title": "Author base pipeline templates",
+            "state": "closed",
+            "html_url": "https://github.com/acme/cicd/issues/226"
+          },
+          {
+            "title": "Configure caching",
+            "state": "closed",
+            "html_url": "https://github.com/acme/cicd/issues/227"
+          },
+          {
+            "title": "Document pipeline conventions",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/228"
+          },
+          {
+            "title": "Add pipeline linting",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/229"
+          }
+        ],
+        "11": [
+          {
+            "title": "Port nightly build job",
+            "state": "closed",
+            "html_url": "https://github.com/acme/cicd/issues/230"
+          },
+          {
+            "title": "Port release pipeline",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/231"
+          },
+          {
+            "title": "Port security scan job",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/232"
+          },
+          {
+            "title": "Validate ported job outputs",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/233"
+          }
+        ],
+        "12": [
+          {
+            "title": "Reproduce concurrency failures",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/234"
+          },
+          {
+            "title": "Add job-level locking",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/235"
+          },
+          {
+            "title": "Make jobs idempotent",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/236"
+          },
+          {
+            "title": "Add flake retries",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/237"
+          }
+        ],
+        "13": [
+          {
+            "title": "Run new and legacy in parallel",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/238"
+          },
+          {
+            "title": "Diff outputs for parity",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/239"
+          }
+        ],
+        "14": [
+          {
+            "title": "Freeze legacy scheduler",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/240"
+          },
+          {
+            "title": "Archive legacy job configs",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/241"
+          }
+        ],
+        "15": [
+          {
+            "title": "Final cutover sign-off",
+            "state": "open",
+            "html_url": "https://github.com/acme/cicd/issues/242"
+          }
+        ]
+      }
+    }
+  }
+}

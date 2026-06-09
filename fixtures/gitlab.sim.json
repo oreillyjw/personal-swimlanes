@@ -1,0 +1,373 @@
+{
+  "projects": {
+    "acme/infra": {
+      "milestones": {
+        "12": {
+          "id": 12,
+          "iid": 1,
+          "title": "Discovery & Design",
+          "description": "Scope, architecture, and capacity planning",
+          "due_date": "2026-06-27",
+          "state": "active",
+          "web_url": "https://gitlab.com/acme/infra/-/milestones/1"
+        },
+        "13": {
+          "id": 13,
+          "iid": 2,
+          "title": "Procurement & Onboarding",
+          "description": "Vendor selection, environment prep",
+          "due_date": "2026-07-18",
+          "state": "active",
+          "web_url": "https://gitlab.com/acme/infra/-/milestones/2"
+        },
+        "14": {
+          "id": 14,
+          "iid": 3,
+          "title": "Provisioning & Configuration",
+          "description": "Stand up and configure target environment",
+          "due_date": "2026-08-08",
+          "state": "active",
+          "web_url": "https://gitlab.com/acme/infra/-/milestones/3"
+        },
+        "15": {
+          "id": 15,
+          "iid": 4,
+          "title": "Integration & DR Testing",
+          "description": "Data sync, failover / DR validation",
+          "due_date": "2026-08-22",
+          "state": "active",
+          "web_url": "https://gitlab.com/acme/infra/-/milestones/4"
+        },
+        "16": {
+          "id": 16,
+          "iid": 5,
+          "title": "Final Validation & Go/No-Go",
+          "description": "Runbook, cutover rehearsal",
+          "due_date": "2026-08-29",
+          "state": "active",
+          "web_url": "https://gitlab.com/acme/infra/-/milestones/5"
+        },
+        "17": {
+          "id": 17,
+          "iid": 6,
+          "title": "INFRA CUTOVER",
+          "description": "Production cutover to the new environment",
+          "due_date": "2026-08-31",
+          "state": "active",
+          "web_url": "https://gitlab.com/acme/infra/-/milestones/6"
+        }
+      },
+      "issues": {
+        "12": [
+          {
+            "title": "Define cutover success criteria",
+            "state": "closed",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/101"
+          },
+          {
+            "title": "Document current-state architecture",
+            "state": "closed",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/102"
+          },
+          {
+            "title": "Capacity model for target environment",
+            "state": "closed",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/103"
+          },
+          {
+            "title": "Identify migration risks & owners",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/104"
+          },
+          {
+            "title": "Draft high-level cutover plan",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/105"
+          }
+        ],
+        "13": [
+          {
+            "title": "Shortlist infrastructure vendors",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/106"
+          },
+          {
+            "title": "Negotiate environment sizing & pricing",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/107"
+          },
+          {
+            "title": "Onboard team to vendor console",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/108"
+          },
+          {
+            "title": "Set up billing & cost alerts",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/109"
+          }
+        ],
+        "14": [
+          {
+            "title": "Provision base network & VPC",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/110"
+          },
+          {
+            "title": "Configure identity & access",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/111"
+          },
+          {
+            "title": "Stand up compute & storage tiers",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/112"
+          },
+          {
+            "title": "Apply baseline hardening",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/113"
+          },
+          {
+            "title": "Wire up secrets management",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/114"
+          },
+          {
+            "title": "Configure observability stack",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/115"
+          }
+        ],
+        "15": [
+          {
+            "title": "Establish data replication",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/116"
+          },
+          {
+            "title": "Run failover drill",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/117"
+          },
+          {
+            "title": "Validate backups & restore",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/118"
+          },
+          {
+            "title": "Document DR runbook",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/119"
+          }
+        ],
+        "16": [
+          {
+            "title": "Full cutover rehearsal",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/120"
+          },
+          {
+            "title": "Sign-off checklist complete",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/121"
+          },
+          {
+            "title": "Go/No-Go review with stakeholders",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/122"
+          }
+        ],
+        "17": [
+          {
+            "title": "Execute production cutover",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/123"
+          },
+          {
+            "title": "Post-cutover smoke tests",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/infra/-/issues/124"
+          }
+        ]
+      }
+    },
+    "acme/data-pipeline": {
+      "milestones": {
+        "30": {
+          "id": 30,
+          "iid": 1,
+          "title": "Inventory & Gap Analysis",
+          "description": "Audit sources, joins, attribution",
+          "due_date": "2026-06-26",
+          "state": "active",
+          "web_url": "https://gitlab.com/acme/data-pipeline/-/milestones/1"
+        },
+        "31": {
+          "id": 31,
+          "iid": 2,
+          "title": "Source Model Alignment",
+          "description": "Map entities into the warehouse model",
+          "due_date": "2026-07-17",
+          "state": "active",
+          "web_url": "https://gitlab.com/acme/data-pipeline/-/milestones/2"
+        },
+        "32": {
+          "id": 32,
+          "iid": 3,
+          "title": "Build / Refactor Pipelines",
+          "description": "Incremental loads, transformations",
+          "due_date": "2026-08-14",
+          "state": "active",
+          "web_url": "https://gitlab.com/acme/data-pipeline/-/milestones/3"
+        },
+        "33": {
+          "id": 33,
+          "iid": 4,
+          "title": "Validation & Reconciliation",
+          "description": "Data quality checks, reconcile vs source",
+          "due_date": "2026-09-01",
+          "state": "active",
+          "web_url": "https://gitlab.com/acme/data-pipeline/-/milestones/4"
+        },
+        "34": {
+          "id": 34,
+          "iid": 5,
+          "title": "Hardening & Monitoring",
+          "description": "Alerting, SLAs, runbooks",
+          "due_date": "2026-09-11",
+          "state": "active",
+          "web_url": "https://gitlab.com/acme/data-pipeline/-/milestones/5"
+        },
+        "35": {
+          "id": 35,
+          "iid": 6,
+          "title": "DATA PLATFORM READY",
+          "description": "Pipelines validated, monitored, and handed off",
+          "due_date": "2026-09-18",
+          "state": "active",
+          "web_url": "https://gitlab.com/acme/data-pipeline/-/milestones/6"
+        }
+      },
+      "issues": {
+        "30": [
+          {
+            "title": "Catalog all source systems",
+            "state": "closed",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/125"
+          },
+          {
+            "title": "Map join keys across sources",
+            "state": "closed",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/126"
+          },
+          {
+            "title": "Identify attribution gaps",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/127"
+          },
+          {
+            "title": "Document data ownership",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/128"
+          }
+        ],
+        "31": [
+          {
+            "title": "Define canonical entity model",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/129"
+          },
+          {
+            "title": "Map source fields to model",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/130"
+          },
+          {
+            "title": "Agree grain for each table",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/131"
+          },
+          {
+            "title": "Review with analytics consumers",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/132"
+          }
+        ],
+        "32": [
+          {
+            "title": "Implement incremental loaders",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/133"
+          },
+          {
+            "title": "Refactor transformation layer",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/134"
+          },
+          {
+            "title": "Add idempotent reprocessing",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/135"
+          },
+          {
+            "title": "Backfill historical data",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/136"
+          },
+          {
+            "title": "Optimize warehouse costs",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/137"
+          }
+        ],
+        "33": [
+          {
+            "title": "Add data quality assertions",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/138"
+          },
+          {
+            "title": "Reconcile totals vs source",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/139"
+          },
+          {
+            "title": "Set up anomaly detection",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/140"
+          }
+        ],
+        "34": [
+          {
+            "title": "Define pipeline SLAs",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/141"
+          },
+          {
+            "title": "Wire up alerting",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/142"
+          },
+          {
+            "title": "Write on-call runbooks",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/143"
+          }
+        ],
+        "35": [
+          {
+            "title": "Final stakeholder sign-off",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/144"
+          },
+          {
+            "title": "Handoff to data ops",
+            "state": "opened",
+            "web_url": "https://gitlab.com/acme/data-pipeline/-/issues/145"
+          }
+        ]
+      }
+    }
+  }
+}
