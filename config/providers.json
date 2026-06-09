@@ -1,0 +1,14 @@
+{
+  "providers": {
+    "gitlab": {
+      "id": "gitlab",
+      "apiBaseUrl": "https://gitlab.com/api/v4",
+      "tokenEnv": "GITLAB_TOKEN"
+    },
+    "github": {
+      "id": "github",
+      "apiBaseUrl": "https://api.github.com",
+      "tokenEnv": "GITHUB_TOKEN"
+    }
+  }
+}
