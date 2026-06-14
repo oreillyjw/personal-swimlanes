@@ -39,3 +39,6 @@ yarn-error.log*
 # Local fixture overlay for simulating a private board offline (e.g. real repo
 # names). Merged over the committed fictional fixtures by the MockProvider.
 /fixtures/*.local.json
+
+# Visual brainstorming companion scratch
+/.superpowers/
