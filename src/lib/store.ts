@@ -1,7 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { boardSchema, syncedSchema, type Board, type Synced } from "./types";
-import { isMonday } from "./weeks";
+import { boardSchema, syncedSchema, type Board, type IssueOverride, type Synced } from "./types";
 
 /**
  * All disk access goes through this interface. To move storage elsewhere later
@@ -12,6 +11,8 @@ export interface Store {
   getBoard(): Promise<Board>;
   getSynced(): Promise<Synced>;
   writeSynced(synced: Synced): Promise<void>;
+  /** Local-only: merge hide/pin for one issue into board.json. */
+  setIssueState(key: string, patch: Partial<IssueOverride>): Promise<Board>;
 }
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -19,7 +20,7 @@ const BOARD_FILE = path.join(DATA_DIR, "board.json");
 const BOARD_EXAMPLE_FILE = path.join(DATA_DIR, "board.example.json");
 const SYNCED_FILE = path.join(DATA_DIR, "synced.json");
 
-const EMPTY_SYNCED: Synced = { entries: {}, lastSyncAt: null };
+const EMPTY_SYNCED: Synced = { sources: {}, lastSyncAt: null };
 
 async function fileExists(p: string): Promise<boolean> {
   try {
@@ -71,14 +72,7 @@ export class JsonFileStore implements Store {
     if (!result.success) {
       throw new Error(`Board config failed validation (${target}):\n${result.error.toString()}`);
     }
-    const board = result.data;
-
-    if (!isMonday(board.board.startWeek)) {
-      throw new Error(
-        `board.startWeek (${board.board.startWeek}) must be a Monday for a Monday-start weekly grid.`
-      );
-    }
-    return board;
+    return result.data;
   }
 
   async getSynced(): Promise<Synced> {
@@ -95,6 +89,16 @@ export class JsonFileStore implements Store {
 
   async writeSynced(synced: Synced): Promise<void> {
     await atomicWriteJson(SYNCED_FILE, synced);
+  }
+
+  async setIssueState(key: string, patch: Partial<IssueOverride>): Promise<Board> {
+    // Read the effective board (board.json, or the example on a fresh clone),
+    // merge the override, and write to board.json — never back to the VCS.
+    const board = await this.getBoard();
+    const current = board.issueState[key] ?? { hidden: false, pinned: false };
+    board.issueState[key] = { ...current, ...patch };
+    await atomicWriteJson(BOARD_FILE, board);
+    return board;
   }
 }
 

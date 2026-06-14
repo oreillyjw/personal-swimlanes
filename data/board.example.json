@@ -1,246 +1,34 @@
 {
   "board": {
     "name": "Launch Tracker",
-    "startWeek": "2026-06-08",
-    "horizonWeeks": 19
+    "currentWindowWeeks": 2
   },
-  "lanes": [
+  "sources": [
+    { "provider": "gitlab", "project": "acme/infra" },
+    { "provider": "github", "project": "acme/platform" }
+  ],
+  "swimlanes": [
     {
       "id": "infra",
       "title": "INFRASTRUCTURE CUTOVER",
       "color": "#1E5BB8",
-      "launchLabel": "Launch Aug 31",
-      "provider": "gitlab",
       "milestones": [
-        {
-          "id": "c1",
-          "title": "Discovery & Design",
-          "targetDate": "2026-06-27",
-          "status": "In Progress",
-          "detail": "Scope, architecture, and capacity planning",
-          "sourceRef": { "provider": "gitlab", "project": "acme/infra", "id": "12" }
-        },
-        {
-          "id": "c2",
-          "title": "Procurement & Onboarding",
-          "targetDate": "2026-07-18",
-          "status": "To Do",
-          "detail": "Vendor selection, environment prep",
-          "sourceRef": { "provider": "gitlab", "project": "acme/infra", "id": "13" }
-        },
-        {
-          "id": "c3",
-          "title": "Provisioning & Configuration",
-          "targetDate": "2026-08-08",
-          "status": "To Do",
-          "detail": "Stand up and configure target environment",
-          "sourceRef": { "provider": "gitlab", "project": "acme/infra", "id": "14" }
-        },
-        {
-          "id": "c4",
-          "title": "Integration & DR Testing",
-          "targetDate": "2026-08-22",
-          "status": "To Do",
-          "detail": "Data sync, failover / DR validation",
-          "sourceRef": { "provider": "gitlab", "project": "acme/infra", "id": "15" }
-        },
-        {
-          "id": "c5",
-          "title": "Final Validation & Go/No-Go",
-          "targetDate": "2026-08-29",
-          "status": "To Do",
-          "detail": "Runbook, cutover rehearsal",
-          "sourceRef": { "provider": "gitlab", "project": "acme/infra", "id": "16" }
-        },
-        {
-          "id": "c_launch",
-          "title": "INFRA CUTOVER",
-          "targetDate": "2026-08-31",
-          "status": "To Do",
-          "detail": "Production cutover to the new environment",
-          "isLaunch": true,
-          "sourceRef": { "provider": "gitlab", "project": "acme/infra", "id": "17" }
-        }
+        { "provider": "gitlab", "project": "acme/infra", "id": "12" },
+        { "provider": "gitlab", "project": "acme/infra", "id": "13" }
       ]
     },
     {
       "id": "platform",
       "title": "PLATFORM MIGRATION",
       "color": "#2E7D32",
-      "launchLabel": "Launch Oct 15",
-      "provider": "github",
       "milestones": [
-        {
-          "id": "p1",
-          "title": "Requirements & Data Mapping",
-          "targetDate": "2026-07-03",
-          "status": "In Progress",
-          "detail": "Define data model and field mapping",
-          "sourceRef": { "provider": "github", "project": "acme/platform", "id": "1" }
-        },
-        {
-          "id": "p2",
-          "title": "Build & Integration",
-          "targetDate": "2026-08-07",
-          "status": "To Do",
-          "detail": "Implement integrations between systems",
-          "sourceRef": { "provider": "github", "project": "acme/platform", "id": "2" }
-        },
-        {
-          "id": "p3",
-          "title": "Content & Data Migration",
-          "targetDate": "2026-09-04",
-          "status": "To Do",
-          "detail": "Migrate catalog/content, set up redirects",
-          "sourceRef": { "provider": "github", "project": "acme/platform", "id": "3" }
-        },
-        {
-          "id": "p4",
-          "title": "UAT & Performance Testing",
-          "targetDate": "2026-09-25",
-          "status": "To Do",
-          "detail": "End-to-end UAT, load tests",
-          "sourceRef": { "provider": "github", "project": "acme/platform", "id": "4" }
-        },
-        {
-          "id": "p5",
-          "title": "Soft Launch / Staged Rollout",
-          "targetDate": "2026-10-06",
-          "status": "To Do",
-          "detail": "Limited traffic, monitor",
-          "sourceRef": { "provider": "github", "project": "acme/platform", "id": "5" }
-        },
-        {
-          "id": "p_launch",
-          "title": "PLATFORM LAUNCH",
-          "targetDate": "2026-10-15",
-          "status": "To Do",
-          "detail": "Full traffic cutover to the new platform",
-          "isLaunch": true,
-          "sourceRef": { "provider": "github", "project": "acme/platform", "id": "6" }
-        }
-      ]
-    },
-    {
-      "id": "data",
-      "title": "DATA PIPELINE",
-      "color": "#00838F",
-      "launchLabel": "Ready Sep 18",
-      "provider": "gitlab",
-      "milestones": [
-        {
-          "id": "d1",
-          "title": "Inventory & Gap Analysis",
-          "targetDate": "2026-06-26",
-          "status": "In Progress",
-          "detail": "Audit sources, joins, attribution",
-          "sourceRef": { "provider": "gitlab", "project": "acme/data-pipeline", "id": "30" }
-        },
-        {
-          "id": "d2",
-          "title": "Source Model Alignment",
-          "targetDate": "2026-07-17",
-          "status": "To Do",
-          "detail": "Map entities into the warehouse model",
-          "sourceRef": { "provider": "gitlab", "project": "acme/data-pipeline", "id": "31" }
-        },
-        {
-          "id": "d3",
-          "title": "Build / Refactor Pipelines",
-          "targetDate": "2026-08-14",
-          "status": "To Do",
-          "detail": "Incremental loads, transformations",
-          "sourceRef": { "provider": "gitlab", "project": "acme/data-pipeline", "id": "32" }
-        },
-        {
-          "id": "d4",
-          "title": "Validation & Reconciliation",
-          "targetDate": "2026-09-01",
-          "status": "To Do",
-          "detail": "Data quality checks, reconcile vs source",
-          "sourceRef": { "provider": "gitlab", "project": "acme/data-pipeline", "id": "33" }
-        },
-        {
-          "id": "d5",
-          "title": "Hardening & Monitoring",
-          "targetDate": "2026-09-11",
-          "status": "To Do",
-          "detail": "Alerting, SLAs, runbooks",
-          "sourceRef": { "provider": "gitlab", "project": "acme/data-pipeline", "id": "34" }
-        },
-        {
-          "id": "d_launch",
-          "title": "DATA PLATFORM READY",
-          "targetDate": "2026-09-18",
-          "status": "To Do",
-          "detail": "Pipelines validated, monitored, and handed off",
-          "isLaunch": true,
-          "sourceRef": { "provider": "gitlab", "project": "acme/data-pipeline", "id": "35" }
-        }
-      ]
-    },
-    {
-      "id": "cicd",
-      "title": "CI/CD AUTOMATION",
-      "color": "#6A1B9A",
-      "launchLabel": "Live Jul 31",
-      "provider": "github",
-      "milestones": [
-        {
-          "id": "q1",
-          "title": "Runners & Pipeline Setup",
-          "targetDate": "2026-06-20",
-          "status": "In Progress",
-          "detail": "Build agents, registry, base pipelines",
-          "sourceRef": { "provider": "github", "project": "acme/cicd", "id": "10" }
-        },
-        {
-          "id": "q2",
-          "title": "Migrate Priority Jobs",
-          "targetDate": "2026-07-03",
-          "status": "To Do",
-          "detail": "Port the highest-value scheduled jobs",
-          "sourceRef": { "provider": "github", "project": "acme/cicd", "id": "11" }
-        },
-        {
-          "id": "q3",
-          "title": "Fix Concurrency / Reliability",
-          "targetDate": "2026-07-17",
-          "status": "To Do",
-          "detail": "Resolve race conditions across workers",
-          "sourceRef": { "provider": "github", "project": "acme/cicd", "id": "12" }
-        },
-        {
-          "id": "q4",
-          "title": "Parallel Run vs Legacy",
-          "targetDate": "2026-07-24",
-          "status": "To Do",
-          "detail": "Validate output parity",
-          "sourceRef": { "provider": "github", "project": "acme/cicd", "id": "13" }
-        },
-        {
-          "id": "q5",
-          "title": "Decommission Legacy Scheduler",
-          "targetDate": "2026-07-29",
-          "status": "To Do",
-          "detail": "Cutover, retire old schedulers",
-          "sourceRef": { "provider": "github", "project": "acme/cicd", "id": "14" }
-        },
-        {
-          "id": "q_launch",
-          "title": "CI/CD FULLY LIVE",
-          "targetDate": "2026-07-31",
-          "status": "To Do",
-          "detail": "All jobs on the new platform, legacy retired",
-          "isLaunch": true,
-          "sourceRef": { "provider": "github", "project": "acme/cicd", "id": "15" }
-        }
+        { "provider": "github", "project": "acme/platform", "id": "1" },
+        { "provider": "github", "project": "acme/platform", "id": "2" }
       ]
     }
   ],
-  "dependencies": [
-    { "from": "q_launch", "to": "c3" },
-    { "from": "q_launch", "to": "p2" },
-    { "from": "d_launch", "to": "p4" }
-  ]
+  "issueState": {
+    "gitlab:acme/infra:104": { "pinned": true },
+    "gitlab:acme/infra:108": { "hidden": true }
+  }
 }

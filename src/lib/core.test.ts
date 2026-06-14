@@ -1,108 +1,131 @@
 import { describe, it, expect } from "vitest";
-import { buildWeeks, isMonday, weekFraction, weekIndexFor, mondayOf, parseDay, toISODate } from "./weeks";
-import { refKey } from "./refKey";
+import { mondayOf, parseDay, toISODate, formatMonthDay } from "./weeks";
+import { refKey, sourceKey, issueKey } from "./refKey";
+import { bucketFor, currentWindow, isOverdue } from "./bucket";
 import { buildViewModel } from "./viewModel";
 import type { Board, Synced } from "./types";
 
-describe("week math", () => {
-  it("recognises Monday start weeks", () => {
-    expect(isMonday("2026-06-08")).toBe(true); // a Monday
-    expect(isMonday("2026-06-09")).toBe(false);
-  });
-
-  it("builds a labelled Monday-start ruler", () => {
-    const weeks = buildWeeks("2026-06-08", 3);
-    expect(weeks).toHaveLength(3);
-    expect(weeks[0].label).toBe("W1");
-    expect(weeks[0].dateLabel).toBe("Jun 8");
-    expect(weeks[1].dateLabel).toBe("Jun 15");
-  });
-
-  it("places dates in the correct week column", () => {
-    expect(weekIndexFor("2026-06-08", "2026-06-08", 19)).toBe(0);
-    expect(weekIndexFor("2026-06-08", "2026-06-27", 19)).toBe(2); // W3
-    expect(Math.floor(weekFraction("2026-06-08", "2026-08-31"))).toBe(12);
-  });
-
-  it("snaps an arbitrary day to its Monday", () => {
+describe("date helpers", () => {
+  it("snaps an arbitrary day to its Monday (UTC)", () => {
     expect(toISODate(mondayOf(parseDay("2026-06-10")))).toBe("2026-06-08");
+    expect(toISODate(mondayOf(parseDay("2026-06-14")))).toBe("2026-06-08"); // Sunday -> prior Monday
+  });
+  it("formats a month/day label", () => {
+    expect(formatMonthDay("2026-06-08")).toBe("Jun 8");
   });
 });
 
-describe("refKey", () => {
-  it("is stable and provider-qualified", () => {
-    expect(refKey({ provider: "github", project: "acme/platform", id: "1" })).toBe(
-      "github:acme/platform:1"
-    );
+describe("keys", () => {
+  it("are stable and provider-qualified", () => {
+    expect(refKey({ provider: "github", project: "acme/platform", id: "1" })).toBe("github:acme/platform:1");
+    expect(sourceKey({ provider: "gitlab", project: "acme/infra" })).toBe("gitlab:acme/infra");
+    expect(issueKey("github", "acme/platform", "42")).toBe("github:acme/platform:42");
   });
 });
 
-describe("buildViewModel merge", () => {
+describe("bucketing (currentWindowWeeks = 2, today 2026-06-14)", () => {
+  const w = currentWindow(parseDay("2026-06-14"), 2); // window [2026-06-08, 2026-06-22)
+
+  it("computes the window from the Monday of the current week", () => {
+    expect(w.startISO).toBe("2026-06-08");
+    expect(w.endISO).toBe("2026-06-22");
+    expect(w.todayISO).toBe("2026-06-14");
+  });
+
+  it("places closed issues in Past regardless of date", () => {
+    expect(bucketFor({ state: "closed", dueDate: "2026-12-01" }, w)).toBe("past");
+    expect(bucketFor({ state: "closed", dueDate: null }, w)).toBe("past");
+  });
+
+  it("places open issues by date; undated -> Current", () => {
+    expect(bucketFor({ state: "open", dueDate: "2026-06-18" }, w)).toBe("current"); // in window
+    expect(bucketFor({ state: "open", dueDate: "2026-06-10" }, w)).toBe("current"); // overdue, still Current
+    expect(bucketFor({ state: "open", dueDate: "2026-06-22" }, w)).toBe("future"); // on/after window end
+    expect(bucketFor({ state: "open", dueDate: null }, w)).toBe("current");
+  });
+
+  it("flags open dated issues before today as overdue", () => {
+    expect(isOverdue({ state: "open", dueDate: "2026-06-10" }, w)).toBe(true);
+    expect(isOverdue({ state: "open", dueDate: "2026-06-14" }, w)).toBe(false); // today is not overdue
+    expect(isOverdue({ state: "closed", dueDate: "2026-06-10" }, w)).toBe(false);
+    expect(isOverdue({ state: "open", dueDate: null }, w)).toBe(false);
+  });
+});
+
+describe("buildViewModel", () => {
   const board: Board = {
-    board: { name: "T", startWeek: "2026-06-08", horizonWeeks: 19 },
-    lanes: [
+    board: { name: "T", currentWindowWeeks: 2 },
+    sources: [{ provider: "gitlab", project: "acme/infra" }],
+    swimlanes: [
       {
-        id: "l1",
-        title: "Lane 1",
+        id: "infra",
+        title: "Infra",
         color: "#1E5BB8",
-        launchLabel: "",
-        provider: "gitlab",
-        milestones: [
-          {
-            id: "m1",
-            title: "Planned",
-            targetDate: "2026-06-27",
-            status: "To Do",
-            detail: "",
-            isLaunch: false,
-            sourceRef: { provider: "gitlab", project: "acme/infra", id: "12" },
-          },
-          {
-            id: "m2",
-            title: "No ref",
-            targetDate: "2026-07-18",
-            status: "To Do",
-            detail: "",
-            isLaunch: false,
-            sourceRef: null,
-          },
-        ],
+        milestones: [{ provider: "gitlab", project: "acme/infra", id: "12" }],
       },
     ],
-    dependencies: [],
+    issueState: {
+      "gitlab:acme/infra:104": { hidden: false, pinned: true },
+      "gitlab:acme/infra:108": { hidden: true, pinned: false },
+    },
   };
 
-  it("lets live synced values win where a sourceRef resolves", () => {
-    const synced: Synced = {
-      lastSyncAt: "2026-06-09T00:00:00Z",
-      entries: {
-        "gitlab:acme/infra:12": {
-          title: "Discovery & Design",
-          dueDate: "2026-07-04", // differs from hand targetDate -> should win
-          state: "closed",
-          issuesTotal: 5,
-          issuesClosed: 5,
-          url: "https://gitlab.com/x",
-          issues: [{ title: "i", state: "closed", url: "u" }],
-          syncedAt: "2026-06-09T00:00:00Z",
+  const synced: Synced = {
+    lastSyncAt: "2026-06-14T00:00:00Z",
+    sources: {
+      "gitlab:acme/infra": {
+        syncedAt: "2026-06-14T00:00:00Z",
+        issues: [
+          { number: "101", title: "Closed one", state: "closed", dueDate: "2026-05-20", milestone: { id: "12", title: "Discovery", dueDate: "2026-06-12" }, url: "u101" },
+          { number: "103", title: "Overdue open", state: "open", dueDate: "2026-06-10", milestone: { id: "12", title: "Discovery", dueDate: "2026-06-12" }, url: "u103" },
+          { number: "104", title: "Pinned current", state: "open", dueDate: "2026-06-18", milestone: { id: "12", title: "Discovery", dueDate: "2026-06-12" }, url: "u104" },
+          { number: "108", title: "Hidden catch-all", state: "open", dueDate: null, milestone: null, url: "u108" },
+          { number: "200", title: "Unmapped milestone", state: "open", dueDate: "2026-06-19", milestone: { id: "99", title: "Backlog", dueDate: null }, url: "u200" },
+        ],
+      },
+    },
+  };
+
+  it("maps issues to swimlanes by milestone, with unmapped/no-milestone -> Catch-all", () => {
+    const vm = buildViewModel(board, synced, parseDay("2026-06-14"));
+    const infra = vm.swimlanes.find((l) => l.id === "infra")!;
+    const catchAll = vm.swimlanes.find((l) => l.isCatchAll)!;
+    expect(infra.past.map((t) => t.number)).toEqual(["101"]);
+    // #103 overdue + #104 pinned are both Current; pinned sorts first.
+    expect(infra.current.map((t) => t.number)).toEqual(["104", "103"]);
+    // #200 (unmapped milestone) is in catch-all; #108 hidden excluded by default.
+    expect(catchAll.current.map((t) => t.number)).toEqual(["200"]);
+  });
+
+  it("flags overdue and pinned tiles", () => {
+    const vm = buildViewModel(board, synced, parseDay("2026-06-14"));
+    const infra = vm.swimlanes.find((l) => l.id === "infra")!;
+    expect(infra.current.find((t) => t.number === "103")!.overdue).toBe(true);
+    expect(infra.current.find((t) => t.number === "104")!.pinned).toBe(true);
+  });
+
+  it("hides hidden issues unless showHidden, and counts them", () => {
+    const def = buildViewModel(board, synced, parseDay("2026-06-14"));
+    expect(def.counts.hidden).toBe(1);
+    expect(def.swimlanes.find((l) => l.isCatchAll)!.current.some((t) => t.number === "108")).toBe(false);
+
+    const shown = buildViewModel(board, synced, parseDay("2026-06-14"), { showHidden: true });
+    expect(shown.swimlanes.find((l) => l.isCatchAll)!.current.some((t) => t.number === "108")).toBe(true);
+  });
+
+  it("does not render the catch-all swimlane when it is empty", () => {
+    const empty: Synced = {
+      lastSyncAt: null,
+      sources: {
+        "gitlab:acme/infra": {
+          syncedAt: "x",
+          issues: [
+            { number: "1", title: "A", state: "open", dueDate: "2026-06-18", milestone: { id: "12", title: "D", dueDate: null }, url: "u" },
+          ],
         },
       },
     };
-    const vm = buildViewModel(board, synced, parseDay("2026-06-08"));
-    const m1 = vm.lanes[0].milestones[0];
-    expect(m1.targetDate).toBe("2026-07-04"); // live wins
-    expect(m1.status).toBe("Closed"); // closed state surfaces
-    expect(m1.progress).toEqual({ closed: 5, total: 5 });
-    expect(m1.synced).toBe(true);
-  });
-
-  it("falls back to hand-authored values when not synced", () => {
-    const vm = buildViewModel(board, { entries: {}, lastSyncAt: null });
-    const m1 = vm.lanes[0].milestones[0];
-    expect(m1.targetDate).toBe("2026-06-27"); // hand value
-    expect(m1.progress).toBeNull();
-    expect(m1.synced).toBe(false);
-    const m2 = vm.lanes[0].milestones[1];
-    expect(m2.hasSourceRef).toBe(false);
+    const vm = buildViewModel(board, empty, parseDay("2026-06-14"));
+    expect(vm.swimlanes.some((l) => l.isCatchAll)).toBe(false);
   });
 });

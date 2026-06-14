@@ -1,29 +1,38 @@
-import type { MilestoneRef, ProviderId } from "../types";
+import type { ProviderId } from "../types";
 
-export type { MilestoneRef };
-
-/** Normalised live milestone, identical shape across every provider. */
-export interface MilestoneLive {
-  title: string;
-  dueDate: string | null; // ISO; drives week placement
-  state: "active" | "closed"; // drives status
-  issuesTotal: number;
-  issuesClosed: number; // progress = closed / total
-  url: string; // deep link back to the milestone
+/** A repo/project to list issues from. */
+export interface ProjectRef {
+  provider: "gitlab" | "github";
+  /** GitLab "group/project" path; GitHub "owner/repo". */
+  project: string;
 }
 
-export interface IssueLive {
+/** The milestone an issue natively belongs to (used for swimlane mapping). */
+export interface IssueMilestone {
+  /** GitLab milestone id; GitHub milestone number (as string). */
+  id: string;
   title: string;
-  state: string;
+  dueDate: string | null; // ISO yyyy-mm-dd
+}
+
+/** Normalised issue, identical shape across every provider. */
+export interface ProjectIssue {
+  /** Display number: GitLab iid / GitHub number (as string). */
+  number: string;
+  title: string;
+  state: "open" | "closed";
+  /** ISO yyyy-mm-dd; drives Past/Current/Future placement. */
+  dueDate: string | null;
+  milestone: IssueMilestone | null;
   url: string;
 }
 
 /**
  * One method-set per VCS. All implementations are loadable at once; which one a
- * lane uses is chosen by config (and overridden to MockProvider when SIMULATE).
+ * source uses is chosen by config (and overridden to MockProvider when SIMULATE).
  */
 export interface VcsProvider {
   id: ProviderId;
-  getMilestone(ref: MilestoneRef): Promise<MilestoneLive>;
-  listIssues(ref: MilestoneRef): Promise<IssueLive[]>;
+  /** List ALL issues for a project/repo (excludes PRs). */
+  listProjectIssues(ref: ProjectRef): Promise<ProjectIssue[]>;
 }

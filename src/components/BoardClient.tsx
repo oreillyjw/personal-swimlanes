@@ -2,24 +2,22 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { ResolvedBoard, ResolvedLane, ResolvedMilestone } from "@/lib/viewModel";
-import { DEFAULT_WEEK_WIDTH, MAX_WEEK_WIDTH, MIN_WEEK_WIDTH } from "@/lib/layout";
-import Timeline from "./Timeline";
-import MilestoneDetail from "./MilestoneDetail";
+import type { ResolvedBoard } from "@/lib/viewModel";
+import KanbanBoard from "./KanbanBoard";
 
 interface SyncResponse {
   ok: boolean;
   simulated: boolean;
-  syncedCount: number;
-  errors: { ref: string; message: string }[];
+  sourceCount: number;
+  issueCount: number;
+  errors: { source: string; message: string }[];
   lastSyncAt: string;
 }
 
 export default function BoardClient({ board, simulated }: { board: ResolvedBoard; simulated: boolean }) {
   const router = useRouter();
-  const [weekWidth, setWeekWidth] = useState(DEFAULT_WEEK_WIDTH);
   const [hiddenLaneIds, setHiddenLaneIds] = useState<Set<string>>(new Set());
-  const [selected, setSelected] = useState<{ m: ResolvedMilestone; lane: ResolvedLane } | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [, startTransition] = useTransition();
@@ -30,6 +28,19 @@ export default function BoardClient({ board, simulated }: { board: ResolvedBoard
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  }
+
+  async function setIssueState(key: string, patch: { hidden?: boolean; pinned?: boolean }) {
+    try {
+      await fetch("/api/issue-state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, ...patch }),
+      });
+      startTransition(() => router.refresh());
+    } catch (err) {
+      setSyncMsg(`Update failed: ${(err as Error).message}`);
+    }
   }
 
   async function syncNow() {
@@ -43,7 +54,7 @@ export default function BoardClient({ board, simulated }: { board: ResolvedBoard
       } else {
         const mode = data.simulated ? "simulated" : "live";
         const errPart = data.errors?.length ? `, ${data.errors.length} error(s)` : "";
-        setSyncMsg(`Synced ${data.syncedCount} milestone(s) (${mode})${errPart}.`);
+        setSyncMsg(`Synced ${data.issueCount} issue(s) from ${data.sourceCount} source(s) (${mode})${errPart}.`);
         startTransition(() => router.refresh());
       }
     } catch (err) {
@@ -52,6 +63,8 @@ export default function BoardClient({ board, simulated }: { board: ResolvedBoard
       setSyncing(false);
     }
   }
+
+  const lanes = board.swimlanes;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-[1600px] flex-col gap-4 p-4 sm:p-6">
@@ -73,30 +86,25 @@ export default function BoardClient({ board, simulated }: { board: ResolvedBoard
             </span>
           </h1>
           <p className="mt-0.5 text-xs text-slate-500">
-            {board.lanes.length} lanes · {board.horizonWeeks} weeks from {board.startWeek}
+            {lanes.length} swimlanes · {board.counts.shown + board.counts.hidden} issues
+            {board.counts.hidden > 0 && <> · {board.counts.hidden} hidden</>}
             {board.lastSyncAt && <> · last sync {new Date(board.lastSyncAt).toLocaleString()}</>}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {syncMsg && <span className="max-w-xs truncate text-xs text-slate-500">{syncMsg}</span>}
-          <div className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-1">
+          {board.counts.hidden > 0 && (
             <button
-              onClick={() => setWeekWidth((w) => Math.max(MIN_WEEK_WIDTH, w - 16))}
-              className="px-2 py-1 text-sm font-bold text-slate-500 hover:text-slate-800"
-              title="Zoom out"
+              onClick={() => setShowHidden((s) => !s)}
+              className={`rounded-md border px-2.5 py-1.5 text-xs font-medium ${
+                showHidden ? "border-slate-400 bg-slate-100 text-slate-700" : "border-slate-200 bg-white text-slate-500"
+              }`}
+              title="Toggle hidden issues"
             >
-              −
+              {showHidden ? "Hiding off" : `Show hidden (${board.counts.hidden})`}
             </button>
-            <span className="w-7 text-center text-[10px] text-slate-400">{Math.round((weekWidth / DEFAULT_WEEK_WIDTH) * 100)}%</span>
-            <button
-              onClick={() => setWeekWidth((w) => Math.min(MAX_WEEK_WIDTH, w + 16))}
-              className="px-2 py-1 text-sm font-bold text-slate-500 hover:text-slate-800"
-              title="Zoom in"
-            >
-              +
-            </button>
-          </div>
+          )}
           <button
             onClick={syncNow}
             disabled={syncing}
@@ -107,9 +115,9 @@ export default function BoardClient({ board, simulated }: { board: ResolvedBoard
         </div>
       </header>
 
-      {/* Lane legend / toggles */}
+      {/* Swimlane legend / toggles */}
       <div className="flex flex-wrap items-center gap-2">
-        {board.lanes.map((lane) => {
+        {lanes.map((lane) => {
           const hidden = hiddenLaneIds.has(lane.id);
           return (
             <button
@@ -118,47 +126,38 @@ export default function BoardClient({ board, simulated }: { board: ResolvedBoard
               className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
                 hidden ? "border-slate-200 bg-white text-slate-400" : "border-slate-300 bg-white text-slate-700"
               }`}
-              title={hidden ? "Show lane" : "Hide lane"}
+              title={hidden ? "Show swimlane" : "Hide swimlane"}
             >
               <span
                 className="inline-block h-2.5 w-2.5 rounded-full"
                 style={{ backgroundColor: lane.color, opacity: hidden ? 0.3 : 1 }}
               />
-              <span className={hidden ? "line-through" : ""}>{lane.title}</span>
+              <span className={hidden ? "line-through" : ""}>
+                {lane.isCatchAll ? "Catch-all" : lane.title}
+              </span>
             </button>
           );
         })}
       </div>
 
-      {hiddenLaneIds.size === board.lanes.length ? (
+      {board.counts.total === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-400">
-          All lanes hidden — re-enable one above.
+          No issues yet — click <span className="font-semibold">Sync now</span> to pull issues from your sources.
         </div>
       ) : (
-        <Timeline
+        <KanbanBoard
           board={board}
-          weekWidth={weekWidth}
           hiddenLaneIds={hiddenLaneIds}
-          onSelect={(m, lane) => setSelected({ m, lane })}
+          showHidden={showHidden}
+          onSetState={setIssueState}
         />
       )}
 
-      <footer className="flex items-center gap-4 text-[11px] text-slate-400">
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-0.5 w-5 bg-slate-400" /> sequence
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-0.5 w-5 border-t-2 border-dashed border-rose-500" /> cross-lane dependency
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-3 w-0.5 bg-rose-500" /> today
-        </span>
-        <span>◆ launch milestone</span>
+      <footer className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400">
+        <span>Closed → Past · open by date → Current / Future · unmapped → Catch-all</span>
+        <span className="flex items-center gap-1 text-rose-400">⚠ overdue</span>
+        <span className="flex items-center gap-1 text-amber-500">★ pinned</span>
       </footer>
-
-      {selected && (
-        <MilestoneDetail milestone={selected.m} lane={selected.lane} onClose={() => setSelected(null)} />
-      )}
     </main>
   );
 }

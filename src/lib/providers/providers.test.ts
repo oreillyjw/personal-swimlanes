@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { mapGitlabMilestone, mapGitlabIssues, type GitlabMilestoneRaw, type GitlabIssueRaw } from "./gitlab";
-import { mapGithubMilestone, mapGithubIssues, type GithubMilestoneRaw, type GithubIssueRaw } from "./github";
+import { mapGitlabProjectIssues } from "./gitlab";
+import { mapGithubProjectIssues, nextPageFromLink } from "./github";
 import { MockProvider, type GitlabFixture, type GithubFixture } from "./mock";
 import { resolveApiBaseUrl } from "./index";
 
@@ -14,46 +14,61 @@ const githubFixture = JSON.parse(
   readFileSync(path.join(root, "fixtures/github.sim.json"), "utf8")
 ) as GithubFixture;
 
-describe("gitlab mappers", () => {
-  it("maps a milestone + issues to MilestoneLive, computing counts from issues", () => {
-    const raw = gitlabFixture.projects["acme/infra"].milestones["12"] as GitlabMilestoneRaw;
-    const issues = gitlabFixture.projects["acme/infra"].issues["12"] as GitlabIssueRaw[];
-    const live = mapGitlabMilestone(raw, issues);
-    expect(live.title).toBe("Discovery & Design");
-    expect(live.dueDate).toBe("2026-06-27");
-    expect(live.state).toBe("active");
-    expect(live.issuesTotal).toBe(5);
-    expect(live.issuesClosed).toBe(3);
-    expect(live.url).toContain("gitlab.com");
+describe("gitlab project-issue mapper", () => {
+  const issues = mapGitlabProjectIssues(gitlabFixture.projects["acme/infra"].issues);
+
+  it("normalises state opened->open / closed", () => {
+    expect(issues.find((i) => i.number === "101")!.state).toBe("closed");
+    expect(issues.find((i) => i.number === "103")!.state).toBe("open");
   });
 
-  it("normalises GitLab issue state (opened/closed)", () => {
-    const issues = gitlabFixture.projects["acme/infra"].issues["12"] as GitlabIssueRaw[];
-    const mapped = mapGitlabIssues(issues);
-    expect(mapped).toHaveLength(5);
-    expect(mapped.filter((i) => i.state === "closed")).toHaveLength(3);
+  it("keeps the issue's own due date when present", () => {
+    expect(issues.find((i) => i.number === "103")!.dueDate).toBe("2026-06-10");
+  });
+
+  it("inherits the milestone due date when the issue has none", () => {
+    expect(issues.find((i) => i.number === "106")!.dueDate).toBe("2026-07-18");
+  });
+
+  it("carries the native milestone (id as string) and null when absent", () => {
+    expect(issues.find((i) => i.number === "103")!.milestone).toEqual({
+      id: "12",
+      title: "Discovery & Design",
+      dueDate: "2026-06-12",
+    });
+    expect(issues.find((i) => i.number === "108")!.milestone).toBeNull();
   });
 });
 
-describe("github mappers", () => {
-  it("maps a milestone using API-provided issue counts", () => {
-    const raw = githubFixture.repos["acme/cicd"].milestones["10"] as GithubMilestoneRaw;
-    const live = mapGithubMilestone(raw);
-    expect(live.title).toBe("Runners & Pipeline Setup");
-    expect(live.dueDate).toBe("2026-06-20"); // date portion of due_on
-    expect(live.state).toBe("active"); // "open" -> "active"
-    expect(live.issuesTotal).toBe(raw.open_issues + raw.closed_issues);
-    expect(live.issuesClosed).toBe(raw.closed_issues);
-    expect(live.url).toContain("github.com");
+describe("github project-issue mapper", () => {
+  const issues = mapGithubProjectIssues(githubFixture.repos["acme/platform"].issues);
+
+  it("excludes pull requests", () => {
+    expect(issues.some((i) => i.number === "208")).toBe(false);
+    expect(issues.some((i) => i.title.includes("PR"))).toBe(false);
   });
 
-  it("excludes pull requests from the issue list", () => {
-    const withPr: GithubIssueRaw[] = [
-      { title: "real issue", state: "open", html_url: "u1" },
-      { title: "a PR", state: "open", html_url: "u2", pull_request: { url: "x" } },
-    ];
-    expect(mapGithubIssues(withPr)).toHaveLength(1);
-    expect(mapGithubIssues(withPr)[0].title).toBe("real issue");
+  it("inherits the milestone due_on as the issue date (date portion)", () => {
+    expect(issues.find((i) => i.number === "202")!.dueDate).toBe("2026-06-12");
+    expect(issues.find((i) => i.number === "204")!.dueDate).toBe("2026-08-07");
+  });
+
+  it("has no date when there is no milestone", () => {
+    const i = issues.find((i) => i.number === "207")!;
+    expect(i.dueDate).toBeNull();
+    expect(i.milestone).toBeNull();
+  });
+});
+
+describe("nextPageFromLink", () => {
+  it("extracts the next page number from a Link header", () => {
+    const link =
+      '<https://api.github.com/repos/o/r/issues?page=2>; rel="next", <https://api.github.com/repos/o/r/issues?page=5>; rel="last"';
+    expect(nextPageFromLink(link)).toBe(2);
+  });
+  it("returns null when there is no next page", () => {
+    expect(nextPageFromLink('<https://api.github.com/...?page=5>; rel="last"')).toBeNull();
+    expect(nextPageFromLink(null)).toBeNull();
   });
 });
 
@@ -63,48 +78,36 @@ describe("resolveApiBaseUrl (alternative / self-hosted instances)", () => {
   it("uses the configured default when no override env is set", () => {
     expect(resolveApiBaseUrl(gitlab, {})).toBe("https://gitlab.com/api/v4");
   });
-
   it("uses the env override for a self-hosted instance", () => {
     expect(resolveApiBaseUrl(gitlab, { GITLAB_API_URL: "https://gitlab.example.com/api/v4" })).toBe(
       "https://gitlab.example.com/api/v4"
     );
   });
-
   it("trims trailing slashes and ignores blank overrides", () => {
     expect(resolveApiBaseUrl(gitlab, { GITLAB_API_URL: "https://gl.example.com/api/v4/" })).toBe(
       "https://gl.example.com/api/v4"
     );
     expect(resolveApiBaseUrl(gitlab, { GITLAB_API_URL: "  " })).toBe("https://gitlab.com/api/v4");
   });
-
-  it("falls back to default when no apiBaseUrlEnv is configured", () => {
-    expect(resolveApiBaseUrl({ apiBaseUrl: "https://api.github.com" }, { GITLAB_API_URL: "x" })).toBe(
-      "https://api.github.com"
-    );
-  });
 });
 
-describe("MockProvider routes by ref.provider", () => {
+describe("MockProvider routes by source provider", () => {
   const mock = new MockProvider(gitlabFixture, githubFixture);
 
-  it("resolves a gitlab ref against the gitlab fixture", async () => {
-    const live = await mock.getMilestone({ provider: "gitlab", project: "acme/data-pipeline", id: "30" });
-    expect(live.title).toBe("Inventory & Gap Analysis");
-    expect(live.issuesTotal).toBe(4);
-    expect(live.issuesClosed).toBe(2);
-  });
-
-  it("resolves a github ref against the github fixture", async () => {
-    const live = await mock.getMilestone({ provider: "github", project: "acme/platform", id: "1" });
-    expect(live.title).toBe("Requirements & Data Mapping");
-    expect(live.issuesClosed).toBe(2);
-    const issues = await mock.listIssues({ provider: "github", project: "acme/platform", id: "1" });
+  it("lists gitlab project issues from the gitlab fixture", async () => {
+    const issues = await mock.listProjectIssues({ provider: "gitlab", project: "acme/infra" });
     expect(issues.length).toBeGreaterThan(0);
+    expect(issues.find((i) => i.number === "101")!.title).toBe("Define cutover success criteria");
   });
 
-  it("throws a clear error for an unknown ref", async () => {
+  it("lists github repo issues (PRs excluded) from the github fixture", async () => {
+    const issues = await mock.listProjectIssues({ provider: "github", project: "acme/platform" });
+    expect(issues.every((i) => i.number !== "208")).toBe(true);
+  });
+
+  it("throws a clear error for an unknown source", async () => {
     await expect(
-      mock.getMilestone({ provider: "gitlab", project: "acme/infra", id: "999" })
+      mock.listProjectIssues({ provider: "gitlab", project: "acme/missing" })
     ).rejects.toThrow(/no fixture/);
   });
 });

@@ -1,13 +1,12 @@
-import type { IssueLive, MilestoneLive, MilestoneRef, VcsProvider } from "./types";
+import type { ProjectIssue, ProjectRef, VcsProvider } from "./types";
 
 /**
  * GitLab REST adapter. Verified against the GitLab REST API v4 docs:
- *  - Milestones:  GET /projects/:id/milestones/:milestone_id
- *      fields: title, description, due_date, state ("active"|"closed"), web_url
- *  - Issues:      GET /projects/:id/milestones/:milestone_id/issues
- *      fields: title, state ("opened"|"closed"), web_url
- * GitLab milestone objects do NOT carry issue counts, so progress is computed
- * from the milestone's issue list.
+ *  - Issues: GET /projects/:id/issues?per_page=100&page=N
+ *      fields: iid, title, state ("opened"|"closed"), due_date, web_url,
+ *              milestone: { id, iid, title, due_date } | null
+ * Each issue carries its own due_date (may be null) and its milestone (may be
+ * null). When the issue has no due_date we fall back to the milestone's.
  * Auth: Personal Access Token (scope read_api) via the PRIVATE-TOKEN header.
  */
 
@@ -16,38 +15,38 @@ export interface GitlabMilestoneRaw {
   id: number;
   iid?: number;
   title: string;
-  description?: string | null;
   due_date: string | null; // "yyyy-mm-dd"
-  state: string; // "active" | "closed"
-  web_url: string;
 }
 
 export interface GitlabIssueRaw {
+  iid: number;
   title: string;
   state: string; // "opened" | "closed"
+  due_date: string | null; // "yyyy-mm-dd" | null
   web_url: string;
+  milestone: GitlabMilestoneRaw | null;
 }
 
 // ---- Pure mappers (shared with MockProvider + unit tests) ----
-export function mapGitlabState(state: string): "active" | "closed" {
-  return state === "closed" ? "closed" : "active";
+export function mapGitlabState(state: string): "open" | "closed" {
+  return state === "closed" ? "closed" : "open";
 }
 
-export function mapGitlabIssues(raw: GitlabIssueRaw[]): IssueLive[] {
-  return raw.map((i) => ({ title: i.title, state: i.state, url: i.web_url }));
-}
-
-export function mapGitlabMilestone(raw: GitlabMilestoneRaw, issues: GitlabIssueRaw[]): MilestoneLive {
-  const issuesTotal = issues.length;
-  const issuesClosed = issues.filter((i) => i.state === "closed").length;
-  return {
-    title: raw.title,
-    dueDate: raw.due_date ?? null,
-    state: mapGitlabState(raw.state),
-    issuesTotal,
-    issuesClosed,
-    url: raw.web_url,
-  };
+export function mapGitlabProjectIssues(raw: GitlabIssueRaw[]): ProjectIssue[] {
+  return raw.map((i) => {
+    const milestone = i.milestone
+      ? { id: String(i.milestone.id), title: i.milestone.title, dueDate: i.milestone.due_date ?? null }
+      : null;
+    return {
+      number: String(i.iid),
+      title: i.title,
+      state: mapGitlabState(i.state),
+      // Issue due date wins; otherwise inherit the milestone's.
+      dueDate: i.due_date ?? milestone?.dueDate ?? null,
+      milestone,
+      url: i.web_url,
+    };
+  });
 }
 
 export class GitlabProvider implements VcsProvider {
@@ -62,31 +61,20 @@ export class GitlabProvider implements VcsProvider {
     return { "PRIVATE-TOKEN": this.token, Accept: "application/json" };
   }
 
-  private projectPath(project: string): string {
-    // GitLab accepts a URL-encoded "group/project" path in place of a numeric id.
-    return encodeURIComponent(project);
-  }
-
-  private async fetchMilestoneRaw(ref: MilestoneRef): Promise<GitlabMilestoneRaw> {
-    const url = `${this.apiBaseUrl}/projects/${this.projectPath(ref.project)}/milestones/${ref.id}`;
-    const res = await fetch(url, { headers: this.headers(), cache: "no-store" });
-    if (!res.ok) throw new Error(`GitLab milestone ${ref.project}#${ref.id}: ${res.status} ${res.statusText}`);
-    return (await res.json()) as GitlabMilestoneRaw;
-  }
-
-  private async fetchIssuesRaw(ref: MilestoneRef): Promise<GitlabIssueRaw[]> {
-    const url = `${this.apiBaseUrl}/projects/${this.projectPath(ref.project)}/milestones/${ref.id}/issues?per_page=100`;
-    const res = await fetch(url, { headers: this.headers(), cache: "no-store" });
-    if (!res.ok) throw new Error(`GitLab issues ${ref.project}#${ref.id}: ${res.status} ${res.statusText}`);
-    return (await res.json()) as GitlabIssueRaw[];
-  }
-
-  async getMilestone(ref: MilestoneRef): Promise<MilestoneLive> {
-    const [raw, issues] = await Promise.all([this.fetchMilestoneRaw(ref), this.fetchIssuesRaw(ref)]);
-    return mapGitlabMilestone(raw, issues);
-  }
-
-  async listIssues(ref: MilestoneRef): Promise<IssueLive[]> {
-    return mapGitlabIssues(await this.fetchIssuesRaw(ref));
+  async listProjectIssues(ref: ProjectRef): Promise<ProjectIssue[]> {
+    const enc = encodeURIComponent(ref.project);
+    const all: GitlabIssueRaw[] = [];
+    // Paginate via the x-next-page header until exhausted (cap for safety).
+    let page = 1;
+    for (let guard = 0; guard < 100; guard++) {
+      const url = `${this.apiBaseUrl}/projects/${enc}/issues?per_page=100&page=${page}`;
+      const res = await fetch(url, { headers: this.headers(), cache: "no-store" });
+      if (!res.ok) throw new Error(`GitLab issues ${ref.project}: ${res.status} ${res.statusText}`);
+      all.push(...((await res.json()) as GitlabIssueRaw[]));
+      const next = res.headers.get("x-next-page");
+      if (!next) break;
+      page = Number(next);
+    }
+    return mapGitlabProjectIssues(all);
   }
 }

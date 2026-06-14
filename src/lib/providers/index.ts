@@ -6,7 +6,7 @@ import { GitlabProvider } from "./gitlab";
 import { GithubProvider } from "./github";
 import { loadMockProvider } from "./mock";
 
-export type { VcsProvider, MilestoneLive, IssueLive, MilestoneRef } from "./types";
+export type { VcsProvider, ProjectIssue, ProjectRef, IssueMilestone } from "./types";
 
 const providerConfigSchema = z.object({
   id: z.string(),

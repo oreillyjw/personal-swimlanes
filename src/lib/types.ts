@@ -7,7 +7,10 @@ import { z } from "zod";
 export const providerIdSchema = z.enum(["gitlab", "github", "mock"]);
 export type ProviderId = z.infer<typeof providerIdSchema>;
 
-/** A pointer at one VCS (or simulated) milestone. */
+/** Board-configurable provider (no "mock" — that is runtime only). */
+export const boardProviderSchema = z.enum(["gitlab", "github"]);
+
+/** A pointer at one VCS milestone (used to map a milestone to a swimlane). */
 export const milestoneRefSchema = z.object({
   provider: providerIdSchema,
   /** GitLab: "group/project" path or numeric id. GitHub: "owner/repo". */
@@ -17,75 +20,74 @@ export const milestoneRefSchema = z.object({
 });
 export type MilestoneRef = z.infer<typeof milestoneRefSchema>;
 
-/** Hand-authored milestone in board.json. */
-export const milestoneSchema = z.object({
-  id: z.string().min(1),
-  title: z.string(),
-  /** ISO yyyy-mm-dd; drives week placement when no live dueDate is synced. */
-  targetDate: z.string().nullable().optional(),
-  status: z.string().default("To Do"),
-  detail: z.string().optional().default(""),
-  isLaunch: z.boolean().optional().default(false),
-  /** null/absent = hand-planned only (never synced). */
-  sourceRef: milestoneRefSchema.nullable().optional(),
+/** A repo/project to pull ALL issues from (drives Catch-all completeness). */
+export const sourceSchema = z.object({
+  provider: boardProviderSchema,
+  /** GitLab "group/project" path; GitHub "owner/repo". */
+  project: z.string().min(1),
 });
-export type Milestone = z.infer<typeof milestoneSchema>;
+export type Source = z.infer<typeof sourceSchema>;
 
-export const laneSchema = z.object({
+/** A swimlane (row): a local grouping of milestones. */
+export const swimlaneSchema = z.object({
   id: z.string().min(1),
   title: z.string(),
   color: z.string().regex(/^#([0-9a-fA-F]{6})$/, "color must be #rrggbb"),
-  launchLabel: z.string().optional().default(""),
-  provider: z.enum(["gitlab", "github"]),
-  milestones: z.array(milestoneSchema),
+  /** Milestone refs assigned to this swimlane; an issue inherits its lane. */
+  milestones: z.array(milestoneRefSchema).default([]),
 });
-export type Lane = z.infer<typeof laneSchema>;
+export type Swimlane = z.infer<typeof swimlaneSchema>;
 
-export const dependencySchema = z.object({
-  /** Milestone id the arrow starts from (must finish first). */
-  from: z.string().min(1),
-  /** Milestone id the arrow points to (depends on `from`). */
-  to: z.string().min(1),
+/** Local-only per-issue state. Never written back to the VCS. */
+export const issueOverrideSchema = z.object({
+  hidden: z.boolean().optional().default(false),
+  pinned: z.boolean().optional().default(false),
 });
-export type Dependency = z.infer<typeof dependencySchema>;
+export type IssueOverride = z.infer<typeof issueOverrideSchema>;
 
 export const boardSchema = z.object({
   board: z.object({
     name: z.string(),
-    /** ISO yyyy-mm-dd; must be a Monday (validated at load). */
-    startWeek: z.string(),
-    horizonWeeks: z.number().int().positive(),
+    /**
+     * Current column = open issues due before, or within, this many weeks from
+     * the start of the current week. Default 2 (this + next week).
+     */
+    currentWindowWeeks: z.number().int().positive().default(2),
   }),
-  lanes: z.array(laneSchema),
-  dependencies: z.array(dependencySchema).default([]),
+  sources: z.array(sourceSchema).default([]),
+  swimlanes: z.array(swimlaneSchema).default([]),
+  /** Key = "provider:project:number". */
+  issueState: z.record(z.string(), issueOverrideSchema).default({}),
 });
 export type Board = z.infer<typeof boardSchema>;
 
-/** Live values written by "Sync now", keyed by stringified sourceRef. */
-export const syncedEntrySchema = z.object({
+/** One issue as cached by "Sync now" (shaped like the normalised live issue). */
+export const syncedIssueSchema = z.object({
+  number: z.string(),
   title: z.string(),
+  state: z.enum(["open", "closed"]),
   dueDate: z.string().nullable(),
-  state: z.enum(["active", "closed"]),
-  issuesTotal: z.number().int().nonnegative(),
-  issuesClosed: z.number().int().nonnegative(),
+  milestone: z
+    .object({
+      id: z.string(),
+      title: z.string(),
+      dueDate: z.string().nullable(),
+    })
+    .nullable(),
   url: z.string(),
-  /** Issue list captured for the hover detail. */
-  issues: z
-    .array(
-      z.object({
-        title: z.string(),
-        state: z.string(),
-        url: z.string(),
-      })
-    )
-    .default([]),
-  /** ISO timestamp of when this entry was synced. */
+});
+export type SyncedIssue = z.infer<typeof syncedIssueSchema>;
+
+/** Per-source cache: the full issue list pulled for one repo/project. */
+export const syncedSourceSchema = z.object({
+  issues: z.array(syncedIssueSchema).default([]),
   syncedAt: z.string(),
 });
-export type SyncedEntry = z.infer<typeof syncedEntrySchema>;
+export type SyncedSource = z.infer<typeof syncedSourceSchema>;
 
 export const syncedSchema = z.object({
-  entries: z.record(z.string(), syncedEntrySchema).default({}),
+  /** Key = "provider:project". */
+  sources: z.record(z.string(), syncedSourceSchema).default({}),
   lastSyncAt: z.string().nullable().default(null),
 });
 export type Synced = z.infer<typeof syncedSchema>;
