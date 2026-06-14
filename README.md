@@ -46,9 +46,23 @@ columns, fully offline.
 - **Swimlanes** — one row per project, colored, plus a **Catch-all** row for
   issues whose milestone isn't mapped (or that have no milestone).
 - **Issue tiles** — title, **date** (always shown), issue number, milestone label,
-  and an ⚠ overdue flag. Click the title to open the issue in the VCS. The ⋯ menu
-  **pins** (★, sorts to the top) or **hides** an issue locally.
+  and an ⚠ overdue flag. Click the title to open the issue in the VCS.
 - Per-swimlane show/hide toggles and a **Show hidden** toggle.
+
+## Local edits
+
+All edits are stored locally in `data/board.json` and are **never written back to
+GitLab/GitHub**. From the tile **⋯** menu you can:
+
+- **Pin** (★, sorts to the top of its column) or **Hide** an issue.
+- **Move to** another swimlane — or **Catch-all** — overriding the issue's
+  milestone mapping (a `moved` tag shows; *Reset to milestone lane* reverts).
+- **Edit title & note** — override the displayed title (the real VCS title shows
+  on hover, marked ✎) and attach a private planning note.
+
+The **Edit board** button opens a structure editor to add / rename / recolor /
+delete **swimlanes**, map **milestones** (discovered from the last sync) to lanes
+via a dropdown, and add / remove **sources** — instead of hand-editing JSON.
 
 ## Going live (real GitLab / GitHub)
 
