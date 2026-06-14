@@ -11,5 +11,5 @@ export default async function Page() {
   // Build with hidden tiles included; the client toggles their visibility.
   const vm = buildViewModel(board, synced, new Date(), { showHidden: true });
 
-  return <BoardClient board={vm} simulated={isSimulated()} />;
+  return <BoardClient board={vm} rawBoard={board} simulated={isSimulated()} />;
 }

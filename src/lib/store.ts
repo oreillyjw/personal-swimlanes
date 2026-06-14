@@ -11,8 +11,10 @@ export interface Store {
   getBoard(): Promise<Board>;
   getSynced(): Promise<Synced>;
   writeSynced(synced: Synced): Promise<void>;
-  /** Local-only: merge hide/pin for one issue into board.json. */
+  /** Local-only: merge per-issue override (hide/pin/lane/title/note) into board.json. */
   setIssueState(key: string, patch: Partial<IssueOverride>): Promise<Board>;
+  /** Local-only: replace the board config (structure edits) in board.json. */
+  writeBoard(board: Board): Promise<Board>;
 }
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -99,6 +101,13 @@ export class JsonFileStore implements Store {
     board.issueState[key] = { ...current, ...patch };
     await atomicWriteJson(BOARD_FILE, board);
     return board;
+  }
+
+  async writeBoard(board: Board): Promise<Board> {
+    // Validate before writing so a malformed structure edit can't corrupt the file.
+    const validated = boardSchema.parse(board);
+    await atomicWriteJson(BOARD_FILE, validated);
+    return validated;
   }
 }
 

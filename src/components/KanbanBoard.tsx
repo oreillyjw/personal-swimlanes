@@ -1,7 +1,9 @@
 "use client";
 
 import type { ResolvedBoard, ResolvedSwimlane, Tile } from "@/lib/viewModel";
-import IssueTile from "./IssueTile";
+import IssueTile, { type LaneOption } from "./IssueTile";
+
+type Patch = { hidden?: boolean; pinned?: boolean; laneId?: string | null; title?: string | null; note?: string | null };
 
 const COLUMNS: { key: "past" | "current" | "future"; label: string }[] = [
   { key: "past", label: "◀ Past" },
@@ -12,18 +14,22 @@ const COLUMNS: { key: "past" | "current" | "future"; label: string }[] = [
 function Column({
   tiles,
   color,
+  laneOptions,
   onSetState,
 }: {
   tiles: Tile[];
   color: string;
-  onSetState: (key: string, patch: { hidden?: boolean; pinned?: boolean }) => void;
+  laneOptions: LaneOption[];
+  onSetState: (key: string, patch: Patch) => void;
 }) {
   return (
     <div className="flex min-h-[64px] flex-col gap-1.5 border-l border-slate-100 bg-slate-50/40 p-2">
       {tiles.length === 0 ? (
         <span className="select-none px-1 text-[10px] text-slate-300">—</span>
       ) : (
-        tiles.map((t) => <IssueTile key={t.key} tile={t} color={color} onSetState={onSetState} />)
+        tiles.map((t) => (
+          <IssueTile key={t.key} tile={t} color={color} laneOptions={laneOptions} onSetState={onSetState} />
+        ))
       )}
     </div>
   );
@@ -32,11 +38,13 @@ function Column({
 function SwimlaneRow({
   lane,
   showHidden,
+  laneOptions,
   onSetState,
 }: {
   lane: ResolvedSwimlane;
   showHidden: boolean;
-  onSetState: (key: string, patch: { hidden?: boolean; pinned?: boolean }) => void;
+  laneOptions: LaneOption[];
+  onSetState: (key: string, patch: Patch) => void;
 }) {
   const visible = (tiles: Tile[]) => (showHidden ? tiles : tiles.filter((t) => !t.hidden));
   const count = visible(lane.past).length + visible(lane.current).length + visible(lane.future).length;
@@ -52,7 +60,13 @@ function SwimlaneRow({
         <span className="text-[10px] text-slate-400">{count} issues</span>
       </div>
       {COLUMNS.map((c) => (
-        <Column key={c.key} tiles={visible(lane[c.key])} color={lane.color} onSetState={onSetState} />
+        <Column
+          key={c.key}
+          tiles={visible(lane[c.key])}
+          color={lane.color}
+          laneOptions={laneOptions}
+          onSetState={onSetState}
+        />
       ))}
     </div>
   );
@@ -62,12 +76,14 @@ export default function KanbanBoard({
   board,
   hiddenLaneIds,
   showHidden,
+  laneOptions,
   onSetState,
 }: {
   board: ResolvedBoard;
   hiddenLaneIds: Set<string>;
   showHidden: boolean;
-  onSetState: (key: string, patch: { hidden?: boolean; pinned?: boolean }) => void;
+  laneOptions: LaneOption[];
+  onSetState: (key: string, patch: Patch) => void;
 }) {
   const lanes = board.swimlanes.filter((l) => !hiddenLaneIds.has(l.id));
 
@@ -93,7 +109,13 @@ export default function KanbanBoard({
           </div>
         ) : (
           lanes.map((lane) => (
-            <SwimlaneRow key={lane.id} lane={lane} showHidden={showHidden} onSetState={onSetState} />
+            <SwimlaneRow
+              key={lane.id}
+              lane={lane}
+              showHidden={showHidden}
+              laneOptions={laneOptions}
+              onSetState={onSetState}
+            />
           ))
         )}
       </div>

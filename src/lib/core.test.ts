@@ -113,6 +113,55 @@ describe("buildViewModel", () => {
     expect(shown.swimlanes.find((l) => l.isCatchAll)!.current.some((t) => t.number === "108")).toBe(true);
   });
 
+  it("applies local lane / title / note overrides and reports discovered milestones", () => {
+    const b: Board = {
+      board: { name: "T", currentWindowWeeks: 2 },
+      sources: [{ provider: "gitlab", project: "acme/infra" }],
+      swimlanes: [
+        { id: "infra", title: "Infra", color: "#1E5BB8", milestones: [{ provider: "gitlab", project: "acme/infra", id: "12" }] },
+        { id: "ops", title: "Ops", color: "#2E7D32", milestones: [] },
+      ],
+      issueState: {
+        "gitlab:acme/infra:103": { hidden: false, pinned: false, laneId: "ops" }, // move out of milestone lane
+        "gitlab:acme/infra:104": { hidden: false, pinned: false, title: "RENAMED", note: "ping design" },
+        "gitlab:acme/infra:200": { hidden: false, pinned: false, laneId: "__catch_all__" }, // force catch-all
+      },
+    };
+    const s: Synced = {
+      lastSyncAt: null,
+      sources: {
+        "gitlab:acme/infra": {
+          syncedAt: "x",
+          issues: [
+            { number: "103", title: "Moved", state: "open", dueDate: "2026-06-18", milestone: { id: "12", title: "Discovery", dueDate: null }, url: "u" },
+            { number: "104", title: "Original", state: "open", dueDate: "2026-06-18", milestone: { id: "12", title: "Discovery", dueDate: null }, url: "u" },
+            { number: "200", title: "Pinme", state: "open", dueDate: "2026-06-18", milestone: { id: "12", title: "Discovery", dueDate: null }, url: "u" },
+          ],
+        },
+      },
+    };
+    const vm = buildViewModel(b, s, parseDay("2026-06-14"));
+    const infra = vm.swimlanes.find((l) => l.id === "infra")!;
+    const ops = vm.swimlanes.find((l) => l.id === "ops")!;
+    const catchAll = vm.swimlanes.find((l) => l.isCatchAll)!;
+
+    // #103 moved to ops; flagged laneOverridden
+    expect(ops.current.map((t) => t.number)).toEqual(["103"]);
+    expect(ops.current[0].laneOverridden).toBe(true);
+    // #200 forced to catch-all even though its milestone (12) maps to infra
+    expect(catchAll.current.map((t) => t.number)).toEqual(["200"]);
+    // #104 title/note override
+    const t104 = infra.current.find((t) => t.number === "104")!;
+    expect(t104.title).toBe("RENAMED");
+    expect(t104.liveTitle).toBe("Original");
+    expect(t104.titleOverridden).toBe(true);
+    expect(t104.note).toBe("ping design");
+    // discovered milestone surfaced with its current mapping
+    expect(vm.discoveredMilestones).toEqual([
+      { key: "gitlab:acme/infra:12", provider: "gitlab", project: "acme/infra", id: "12", title: "Discovery", laneId: "infra" },
+    ]);
+  });
+
   it("does not render the catch-all swimlane when it is empty", () => {
     const empty: Synced = {
       lastSyncAt: null,

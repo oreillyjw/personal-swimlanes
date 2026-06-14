@@ -42,6 +42,12 @@ export type Swimlane = z.infer<typeof swimlaneSchema>;
 export const issueOverrideSchema = z.object({
   hidden: z.boolean().optional().default(false),
   pinned: z.boolean().optional().default(false),
+  /** Force the issue into this swimlane id (or CATCH_ALL_ID); null = use milestone map. */
+  laneId: z.string().nullable().optional(),
+  /** Display title override; null/absent = use the live VCS title. */
+  title: z.string().nullable().optional(),
+  /** Private planning note shown on the tile; null/absent = none. */
+  note: z.string().nullable().optional(),
 });
 export type IssueOverride = z.infer<typeof issueOverrideSchema>;
 

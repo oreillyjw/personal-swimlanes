@@ -9,6 +9,10 @@ const bodySchema = z.object({
   key: z.string().min(1),
   hidden: z.boolean().optional(),
   pinned: z.boolean().optional(),
+  // null clears the override back to its default / VCS value.
+  laneId: z.string().nullable().optional(),
+  title: z.string().nullable().optional(),
+  note: z.string().nullable().optional(),
 });
 
 export async function POST(req: Request) {

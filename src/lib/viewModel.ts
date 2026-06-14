@@ -5,9 +5,12 @@ import { bucketFor, currentWindow, isOverdue, type Bucket } from "./bucket";
 
 /** A single issue rendered as a tile in one column of a swimlane. */
 export interface Tile {
-  key: string; // provider:project:number — stable id for hide/pin
+  key: string; // provider:project:number — stable id for overrides
   number: string;
-  title: string;
+  title: string; // override title if set, else live title
+  liveTitle: string; // the original VCS title
+  titleOverridden: boolean;
+  note: string | null; // local-only note
   date: string | null; // ISO
   dateLabel: string; // "Jun 8" or "No date"
   state: "open" | "closed";
@@ -17,6 +20,17 @@ export interface Tile {
   url: string;
   pinned: boolean;
   hidden: boolean;
+  laneOverridden: boolean; // placed by a local laneId, not its milestone
+}
+
+/** A milestone discovered in the synced issues, with its current lane mapping. */
+export interface DiscoveredMilestone {
+  key: string; // refKey(provider:project:id)
+  provider: string;
+  project: string;
+  id: string;
+  title: string;
+  laneId: string | null; // currently mapped swimlane, or null (Catch-all)
 }
 
 export interface ResolvedSwimlane {
@@ -34,11 +48,12 @@ export interface ResolvedSwimlane {
 export interface ResolvedBoard {
   name: string;
   swimlanes: ResolvedSwimlane[];
+  discoveredMilestones: DiscoveredMilestone[];
   lastSyncAt: string | null;
   counts: { shown: number; hidden: number; total: number };
 }
 
-const CATCH_ALL_ID = "__catch_all__";
+export const CATCH_ALL_ID = "__catch_all__";
 
 /** Split a "provider:project" source key back into its parts. */
 function splitSourceKey(key: string): { provider: string; project: string } {
@@ -96,10 +111,28 @@ export function buildViewModel(
   let shown = 0;
   let total = 0;
 
+  // Discovered milestones (from synced issues) keyed by refKey, with current lane.
+  const discovered = new Map<string, DiscoveredMilestone>();
+
   for (const [srcKey, src] of Object.entries(synced.sources)) {
     const { provider, project } = splitSourceKey(srcKey);
     for (const issue of src.issues) {
       total++;
+
+      const mRefKey = issue.milestone
+        ? refKey({ provider: provider as "gitlab" | "github", project, id: issue.milestone.id })
+        : null;
+      if (mRefKey && issue.milestone && !discovered.has(mRefKey)) {
+        discovered.set(mRefKey, {
+          key: mRefKey,
+          provider,
+          project,
+          id: issue.milestone.id,
+          title: issue.milestone.title,
+          laneId: milestoneToLane.get(mRefKey) ?? null,
+        });
+      }
+
       const key = issueKey(provider, project, issue.number);
       const override = board.issueState[key];
       const isHidden = override?.hidden ?? false;
@@ -111,16 +144,21 @@ export function buildViewModel(
         shown++;
       }
 
-      const laneId = issue.milestone
-        ? milestoneToLane.get(refKey({ provider: provider as "gitlab" | "github", project, id: issue.milestone.id }))
-        : undefined;
-      const lane = (laneId && lanes.get(laneId)) || catchAll;
+      // Lane: explicit local override wins; else the milestone map; else Catch-all.
+      const milestoneLaneId = mRefKey ? milestoneToLane.get(mRefKey) : undefined;
+      const overrideLaneId = override?.laneId ?? null;
+      const laneOverridden = overrideLaneId != null;
+      const targetLaneId = overrideLaneId ?? milestoneLaneId;
+      const lane = (targetLaneId && lanes.get(targetLaneId)) || catchAll;
 
       const bucket = bucketFor(issue, window);
       const tile: Tile = {
         key,
         number: issue.number,
-        title: issue.title,
+        title: override?.title || issue.title,
+        liveTitle: issue.title,
+        titleOverridden: Boolean(override?.title),
+        note: override?.note ?? null,
         date: issue.dueDate,
         dateLabel: issue.dueDate ? formatMonthDay(issue.dueDate) : "No date",
         state: issue.state,
@@ -130,6 +168,7 @@ export function buildViewModel(
         url: issue.url,
         pinned: isPinned,
         hidden: isHidden,
+        laneOverridden,
       };
       lane[bucket].push(tile);
     }
@@ -147,9 +186,14 @@ export function buildViewModel(
   finalize(catchAll);
   if (catchAll.count > 0) swimlanes.push(catchAll);
 
+  const discoveredMilestones = [...discovered.values()].sort(
+    (a, b) => a.project.localeCompare(b.project) || a.title.localeCompare(b.title)
+  );
+
   return {
     name: board.board.name,
     swimlanes,
+    discoveredMilestones,
     lastSyncAt: synced.lastSyncAt,
     counts: { shown, hidden, total },
   };

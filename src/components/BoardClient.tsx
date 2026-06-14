@@ -3,7 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { ResolvedBoard } from "@/lib/viewModel";
+import { CATCH_ALL_ID } from "@/lib/viewModel";
+import type { Board } from "@/lib/types";
 import KanbanBoard from "./KanbanBoard";
+import BoardEditor from "./BoardEditor";
 
 interface SyncResponse {
   ok: boolean;
@@ -14,13 +17,29 @@ interface SyncResponse {
   lastSyncAt: string;
 }
 
-export default function BoardClient({ board, simulated }: { board: ResolvedBoard; simulated: boolean }) {
+export default function BoardClient({
+  board,
+  rawBoard,
+  simulated,
+}: {
+  board: ResolvedBoard;
+  rawBoard: Board;
+  simulated: boolean;
+}) {
   const router = useRouter();
   const [hiddenLaneIds, setHiddenLaneIds] = useState<Set<string>>(new Set());
   const [showHidden, setShowHidden] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [, startTransition] = useTransition();
+
+  // Move-to-lane targets: configured swimlanes + Catch-all (from the raw config,
+  // so empty lanes still appear as targets).
+  const laneOptions = [
+    ...rawBoard.swimlanes.map((l) => ({ id: l.id, title: l.title })),
+    { id: CATCH_ALL_ID, title: "Catch-all" },
+  ];
 
   function toggleLane(id: string) {
     setHiddenLaneIds((prev) => {
@@ -94,6 +113,13 @@ export default function BoardClient({ board, simulated }: { board: ResolvedBoard
 
         <div className="flex items-center gap-2">
           {syncMsg && <span className="max-w-xs truncate text-xs text-slate-500">{syncMsg}</span>}
+          <button
+            onClick={() => setEditing(true)}
+            className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+            title="Edit board structure"
+          >
+            Edit board
+          </button>
           {board.counts.hidden > 0 && (
             <button
               onClick={() => setShowHidden((s) => !s)}
@@ -149,7 +175,20 @@ export default function BoardClient({ board, simulated }: { board: ResolvedBoard
           board={board}
           hiddenLaneIds={hiddenLaneIds}
           showHidden={showHidden}
+          laneOptions={laneOptions}
           onSetState={setIssueState}
+        />
+      )}
+
+      {editing && (
+        <BoardEditor
+          board={rawBoard}
+          discoveredMilestones={board.discoveredMilestones}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            startTransition(() => router.refresh());
+          }}
         />
       )}
 
