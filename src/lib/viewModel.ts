@@ -5,6 +5,7 @@ export interface IssueLite {
   title: string;
   state: string;
   url: string;
+  assignees: string[];
 }
 
 /** A planned item resolved with live status from the synced cache. */
@@ -23,6 +24,7 @@ export interface ResolvedItem {
   liveState: "active" | "closed" | null;
   progress: { closed: number; total: number } | null; // milestones only
   issues: IssueLite[]; // milestone's issues, for the detail view
+  assignees: string[]; // issue: its assignees; milestone: unique across its issues
   overdue: boolean;
   url: string | null;
   tags: string[];
@@ -80,14 +82,14 @@ interface SyncIndex {
   issueByKey: Map<string, SyncedIssue>;
   /** key provider:project:milestoneId -> issues in that milestone */
   milestoneIssues: Map<string, SyncedIssue[]>;
-  /** key provider:project:milestoneId -> {title, dueDate} */
-  milestoneMeta: Map<string, { title: string; dueDate: string | null }>;
+  /** key provider:project:milestoneId -> {title, dueDate, url} */
+  milestoneMeta: Map<string, { title: string; dueDate: string | null; url: string | null }>;
 }
 
 function buildIndex(synced: Synced): SyncIndex {
   const issueByKey = new Map<string, SyncedIssue>();
   const milestoneIssues = new Map<string, SyncedIssue[]>();
-  const milestoneMeta = new Map<string, { title: string; dueDate: string | null }>();
+  const milestoneMeta = new Map<string, { title: string; dueDate: string | null; url: string | null }>();
 
   for (const [srcKey, src] of Object.entries(synced.sources)) {
     for (const issue of src.issues) {
@@ -97,8 +99,11 @@ function buildIndex(synced: Synced): SyncIndex {
         const arr = milestoneIssues.get(mKey) ?? [];
         arr.push(issue);
         milestoneIssues.set(mKey, arr);
-        if (!milestoneMeta.has(mKey)) {
-          milestoneMeta.set(mKey, { title: issue.milestone.title, dueDate: issue.milestone.dueDate });
+        const existing = milestoneMeta.get(mKey);
+        if (!existing) {
+          milestoneMeta.set(mKey, { title: issue.milestone.title, dueDate: issue.milestone.dueDate, url: issue.milestone.url ?? null });
+        } else if (!existing.url && issue.milestone.url) {
+          existing.url = issue.milestone.url; // fill url from whichever issue carries it
         }
       }
     }
@@ -119,6 +124,7 @@ function resolveItem(item: Item, startWeek: string, todayISO: string, idx: SyncI
   let issues: IssueLite[] = [];
   let url: string | null = null;
   let liveTitle: string | null = null;
+  let assignees: string[] = [];
   let resolved = false;
 
   if (item.sourceRef) {
@@ -131,8 +137,11 @@ function resolveItem(item: Item, startWeek: string, todayISO: string, idx: SyncI
         const closed = list.filter((i) => i.state === "closed").length;
         progress = { closed, total: list.length };
         liveState = list.length > 0 && closed === list.length ? "closed" : "active";
-        issues = list.map((i) => ({ title: i.title, state: i.state, url: i.url }));
+        issues = list.map((i) => ({ title: i.title, state: i.state, url: i.url, assignees: i.assignees ?? [] }));
         liveTitle = meta?.title ?? null;
+        url = meta?.url ?? null;
+        // Unique assignees across the milestone's open issues.
+        assignees = [...new Set(list.flatMap((i) => i.assignees ?? []))];
       }
     } else {
       const issue = idx.issueByKey.get(base);
@@ -141,6 +150,7 @@ function resolveItem(item: Item, startWeek: string, todayISO: string, idx: SyncI
         liveState = issue.state === "closed" ? "closed" : "active";
         url = issue.url;
         liveTitle = issue.title;
+        assignees = issue.assignees ?? [];
       }
     }
   }
@@ -162,6 +172,7 @@ function resolveItem(item: Item, startWeek: string, todayISO: string, idx: SyncI
     liveState,
     progress,
     issues,
+    assignees,
     overdue,
     url,
     tags: item.tags ?? [],

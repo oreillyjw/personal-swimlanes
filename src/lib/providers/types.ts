@@ -13,6 +13,7 @@ export interface IssueMilestone {
   id: string;
   title: string;
   dueDate: string | null; // ISO yyyy-mm-dd
+  url: string | null; // deep link to the milestone
 }
 
 /** Normalised issue, identical shape across every provider. */
@@ -21,9 +22,11 @@ export interface ProjectIssue {
   number: string;
   title: string;
   state: "open" | "closed";
-  /** ISO yyyy-mm-dd; drives Past/Current/Future placement. */
+  /** ISO yyyy-mm-dd; drives placement. */
   dueDate: string | null;
   milestone: IssueMilestone | null;
+  /** Assignee usernames/logins (may be empty). */
+  assignees: string[];
   url: string;
 }
 

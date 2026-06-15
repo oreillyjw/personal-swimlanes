@@ -40,6 +40,8 @@ describe("end-to-end (committed sample)", () => {
     const m12 = infra.items.find((i) => i.id === "infra-m12")!;
     expect(m12.progress).toEqual({ closed: 2, total: 4 });
     expect(m12.weekFraction).toBeGreaterThan(0);
+    expect(m12.url).toContain("gitlab.com"); // milestone deep link resolved
+    expect(m12.assignees).toContain("dana"); // aggregated from milestone issues
 
     // Plan-only launch item
     const launch = infra.items.find((i) => i.id === "infra-launch")!;

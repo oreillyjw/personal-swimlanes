@@ -3,12 +3,12 @@ import type { ResolvedBoard, ResolvedLane, ResolvedItem } from "./viewModel";
 /** Fixed geometry. WEEK_WIDTH is variable (zoom) and passed in. */
 export const LABEL_WIDTH = 220;
 export const RULER_HEIGHT = 56;
-export const LANE_HEIGHT = 150;
-export const CARD_HEIGHT = 88;
-export const SLOT_GAP = 10; // horizontal gap between cards sharing a week
-export const MIN_WEEK_WIDTH = 84;
-export const MAX_WEEK_WIDTH = 220;
-export const DEFAULT_WEEK_WIDTH = 132;
+export const LANE_HEIGHT = 188;
+export const CARD_HEIGHT = 120;
+export const SLOT_GAP = 12; // horizontal gap between cards sharing a week
+export const MIN_WEEK_WIDTH = 96;
+export const MAX_WEEK_WIDTH = 260;
+export const DEFAULT_WEEK_WIDTH = 156;
 
 export interface ItemPlacement {
   item: ResolvedItem;

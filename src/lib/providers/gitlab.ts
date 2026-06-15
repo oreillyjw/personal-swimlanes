@@ -16,6 +16,11 @@ export interface GitlabMilestoneRaw {
   iid?: number;
   title: string;
   due_date: string | null; // "yyyy-mm-dd"
+  web_url?: string;
+}
+
+export interface GitlabUserRaw {
+  username: string;
 }
 
 export interface GitlabIssueRaw {
@@ -25,6 +30,8 @@ export interface GitlabIssueRaw {
   due_date: string | null; // "yyyy-mm-dd" | null
   web_url: string;
   milestone: GitlabMilestoneRaw | null;
+  assignees?: GitlabUserRaw[];
+  assignee?: GitlabUserRaw | null; // legacy single field
 }
 
 // ---- Pure mappers (shared with MockProvider + unit tests) ----
@@ -35,8 +42,13 @@ export function mapGitlabState(state: string): "open" | "closed" {
 export function mapGitlabProjectIssues(raw: GitlabIssueRaw[]): ProjectIssue[] {
   return raw.map((i) => {
     const milestone = i.milestone
-      ? { id: String(i.milestone.id), title: i.milestone.title, dueDate: i.milestone.due_date ?? null }
+      ? { id: String(i.milestone.id), title: i.milestone.title, dueDate: i.milestone.due_date ?? null, url: i.milestone.web_url ?? null }
       : null;
+    const assignees = i.assignees?.length
+      ? i.assignees.map((a) => a.username)
+      : i.assignee
+        ? [i.assignee.username]
+        : [];
     return {
       number: String(i.iid),
       title: i.title,
@@ -44,6 +56,7 @@ export function mapGitlabProjectIssues(raw: GitlabIssueRaw[]): ProjectIssue[] {
       // Issue due date wins; otherwise inherit the milestone's.
       dueDate: i.due_date ?? milestone?.dueDate ?? null,
       milestone,
+      assignees,
       url: i.web_url,
     };
   });

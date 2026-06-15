@@ -48,9 +48,9 @@ describe("buildViewModel (planner)", () => {
       "gitlab:acme/infra": {
         syncedAt: "2026-06-14T00:00:00Z",
         issues: [
-          { number: "101", title: "c1", state: "closed", dueDate: null, milestone: { id: "12", title: "Discovery", dueDate: "2026-06-26" }, url: "u101" },
-          { number: "103", title: "Capacity model", state: "open", dueDate: "2026-06-10", milestone: { id: "12", title: "Discovery", dueDate: "2026-06-26" }, url: "u103" },
-          { number: "108", title: "loose", state: "open", dueDate: null, milestone: null, url: "u108" },
+          { number: "101", title: "c1", state: "closed", dueDate: null, milestone: { id: "12", title: "Discovery", dueDate: "2026-06-26", url: null }, assignees: [], url: "u101" },
+          { number: "103", title: "Capacity model", state: "open", dueDate: "2026-06-10", milestone: { id: "12", title: "Discovery", dueDate: "2026-06-26", url: null }, assignees: ["dana", "rao"], url: "u103" },
+          { number: "108", title: "loose", state: "open", dueDate: null, milestone: null, assignees: [], url: "u108" },
         ],
       },
     },
@@ -79,6 +79,11 @@ describe("buildViewModel (planner)", () => {
     expect(i1.liveState).toBe("active");
     expect(i1.title).toBe("Capacity model");
     expect(i1.overdue).toBe(true); // 2026-06-10 < today, still open
+  });
+
+  it("surfaces assignees (issue: own; milestone: unique across its issues)", () => {
+    expect(a.items.find((i) => i.id === "i1")!.assignees).toEqual(["dana", "rao"]); // issue 103
+    expect(a.items.find((i) => i.id === "m1")!.assignees).toEqual(["dana", "rao"]); // milestone 12 aggregate
   });
 
   it("treats plan-only items as Planned with no live data", () => {

@@ -42,7 +42,9 @@ and the **Add to plan** / **Edit board** controls.
 - **Swimlanes** — one row per project, colored.
 - **Items** placed on their target date: `◆` launch, `◇` milestone, `•` issue.
   Milestone cards show **closed/total progress** from synced issues; overdue
-  open items get a `⚠`.
+  open items get a `⚠`. Cards also show **assignees** (`@user`, from the VCS),
+  local tags, and a **↗ deep link** that opens the issue/milestone in
+  GitLab/GitHub.
 - **Dependency arrows** — indigo normally, **red dashed when the plan slips**
   (prerequisite dated after its dependent). Within-lane and cross-lane.
 - Zoom, per-project show/hide toggles, click an item for detail + editing.

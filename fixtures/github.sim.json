@@ -7,35 +7,37 @@
           "title": "Gather migration requirements",
           "state": "closed",
           "html_url": "https://github.com/acme/platform/issues/201",
-          "milestone": { "number": 1, "title": "Requirements & Data Mapping", "due_on": "2026-06-12T00:00:00Z" }
+          "milestone": { "number": 1, "title": "Requirements & Data Mapping", "due_on": "2026-06-12T00:00:00Z", "html_url": "https://github.com/acme/platform/milestone/1" }
         },
         {
           "number": 202,
           "title": "Draft field mapping spec",
           "state": "open",
           "html_url": "https://github.com/acme/platform/issues/202",
-          "milestone": { "number": 1, "title": "Requirements & Data Mapping", "due_on": "2026-06-12T00:00:00Z" }
+          "milestone": { "number": 1, "title": "Requirements & Data Mapping", "due_on": "2026-06-12T00:00:00Z", "html_url": "https://github.com/acme/platform/milestone/1" },
+          "assignees": [{ "login": "mira" }]
         },
         {
           "number": 203,
           "title": "Review mapping with stakeholders",
           "state": "open",
           "html_url": "https://github.com/acme/platform/issues/203",
-          "milestone": { "number": 1, "title": "Requirements & Data Mapping", "due_on": "2026-06-12T00:00:00Z" }
+          "milestone": { "number": 1, "title": "Requirements & Data Mapping", "due_on": "2026-06-12T00:00:00Z", "html_url": "https://github.com/acme/platform/milestone/1" }
         },
         {
           "number": 204,
           "title": "Build source connector",
           "state": "open",
           "html_url": "https://github.com/acme/platform/issues/204",
-          "milestone": { "number": 2, "title": "Build & Integration", "due_on": "2026-08-07T00:00:00Z" }
+          "milestone": { "number": 2, "title": "Build & Integration", "due_on": "2026-08-07T00:00:00Z", "html_url": "https://github.com/acme/platform/milestone/2" },
+          "assignees": [{ "login": "mira" }, { "login": "kit" }]
         },
         {
           "number": 205,
           "title": "Implement transformation layer",
           "state": "open",
           "html_url": "https://github.com/acme/platform/issues/205",
-          "milestone": { "number": 2, "title": "Build & Integration", "due_on": "2026-08-07T00:00:00Z" }
+          "milestone": { "number": 2, "title": "Build & Integration", "due_on": "2026-08-07T00:00:00Z", "html_url": "https://github.com/acme/platform/milestone/2" }
         },
         {
           "number": 206,

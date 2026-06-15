@@ -35,8 +35,15 @@ describe("gitlab project-issue mapper", () => {
       id: "12",
       title: "Discovery & Design",
       dueDate: "2026-06-12",
+      url: "https://gitlab.com/acme/infra/-/milestones/1",
     });
     expect(issues.find((i) => i.number === "108")!.milestone).toBeNull();
+  });
+
+  it("maps assignees (array and legacy single field), empty when none", () => {
+    expect(issues.find((i) => i.number === "103")!.assignees).toEqual(["dana", "rao"]);
+    expect(issues.find((i) => i.number === "104")!.assignees).toEqual(["dana"]); // legacy `assignee`
+    expect(issues.find((i) => i.number === "101")!.assignees).toEqual([]);
   });
 });
 

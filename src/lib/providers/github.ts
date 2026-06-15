@@ -15,6 +15,11 @@ export interface GithubMilestoneRaw {
   number: number;
   title: string;
   due_on: string | null; // ISO datetime, e.g. "2026-07-03T00:00:00Z"
+  html_url?: string;
+}
+
+export interface GithubUserRaw {
+  login: string;
 }
 
 export interface GithubIssueRaw {
@@ -24,6 +29,8 @@ export interface GithubIssueRaw {
   html_url: string;
   pull_request?: unknown; // present => this "issue" is actually a PR
   milestone: GithubMilestoneRaw | null;
+  assignees?: GithubUserRaw[];
+  assignee?: GithubUserRaw | null; // legacy single field
 }
 
 // ---- Pure mappers (shared with MockProvider + unit tests) ----
@@ -41,8 +48,14 @@ export function mapGithubProjectIssues(raw: GithubIssueRaw[]): ProjectIssue[] {
             id: String(i.milestone.number),
             title: i.milestone.title,
             dueDate: i.milestone.due_on ? i.milestone.due_on.slice(0, 10) : null,
+            url: i.milestone.html_url ?? null,
           }
         : null;
+      const assignees = i.assignees?.length
+        ? i.assignees.map((a) => a.login)
+        : i.assignee
+          ? [i.assignee.login]
+          : [];
       return {
         number: String(i.number),
         title: i.title,
@@ -50,6 +63,7 @@ export function mapGithubProjectIssues(raw: GithubIssueRaw[]): ProjectIssue[] {
         // GitHub issues have no due date; inherit the milestone's.
         dueDate: milestone?.dueDate ?? null,
         milestone,
+        assignees,
         url: i.html_url,
       };
     });

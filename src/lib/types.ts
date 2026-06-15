@@ -88,8 +88,10 @@ export const syncedIssueSchema = z.object({
       id: z.string(),
       title: z.string(),
       dueDate: z.string().nullable(),
+      url: z.string().nullable().default(null),
     })
     .nullable(),
+  assignees: z.array(z.string()).default([]),
   url: z.string(),
 });
 export type SyncedIssue = z.infer<typeof syncedIssueSchema>;

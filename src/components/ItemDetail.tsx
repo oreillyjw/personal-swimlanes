@@ -133,6 +133,18 @@ export default function ItemDetail({
             )}
           </div>
 
+          {/* Assignees (from the VCS) */}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Assignees</span>
+            {item.assignees.length === 0 ? (
+              <span className="text-slate-400">{item.hasSourceRef ? "none" : "—"}</span>
+            ) : (
+              item.assignees.map((a) => (
+                <span key={a} className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600">@{a}</span>
+              ))
+            )}
+          </div>
+
           {/* Link to a VCS issue / milestone */}
           <section className="space-y-2 rounded-lg border border-slate-200 p-3">
             <div className="flex items-center justify-between">
@@ -147,8 +159,15 @@ export default function ItemDetail({
             </div>
             {item.sourceRef ? (
               <div className="text-xs text-slate-600">
-                <span className="font-mono">{item.sourceRef.provider}:{item.sourceRef.project}</span>{" "}
-                · {item.sourceRef.type} #{item.sourceRef.id}
+                {item.url ? (
+                  <a href={item.url} target="_blank" rel="noreferrer" className="font-medium text-indigo-600 hover:underline">
+                    {item.sourceRef.provider}:{item.sourceRef.project} · {item.sourceRef.type} #{item.sourceRef.id} ↗
+                  </a>
+                ) : (
+                  <span>
+                    <span className="font-mono">{item.sourceRef.provider}:{item.sourceRef.project}</span> · {item.sourceRef.type} #{item.sourceRef.id}
+                  </span>
+                )}
                 {item.linkUnresolved && <span className="ml-1 text-rose-500">⚠ not found in last sync</span>}
                 <button onClick={() => setLinking((v) => !v)} className="ml-2 text-slate-500 hover:underline">change</button>
               </div>

@@ -8,7 +8,7 @@
           "state": "closed",
           "due_date": "2026-05-20",
           "web_url": "https://gitlab.com/acme/infra/-/issues/101",
-          "milestone": { "id": 12, "iid": 1, "title": "Discovery & Design", "due_date": "2026-06-12" }
+          "milestone": { "id": 12, "iid": 1, "title": "Discovery & Design", "due_date": "2026-06-12", "web_url": "https://gitlab.com/acme/infra/-/milestones/1" }
         },
         {
           "iid": 102,
@@ -16,7 +16,7 @@
           "state": "closed",
           "due_date": null,
           "web_url": "https://gitlab.com/acme/infra/-/issues/102",
-          "milestone": { "id": 12, "iid": 1, "title": "Discovery & Design", "due_date": "2026-06-12" }
+          "milestone": { "id": 12, "iid": 1, "title": "Discovery & Design", "due_date": "2026-06-12", "web_url": "https://gitlab.com/acme/infra/-/milestones/1" }
         },
         {
           "iid": 103,
@@ -24,7 +24,8 @@
           "state": "opened",
           "due_date": "2026-06-10",
           "web_url": "https://gitlab.com/acme/infra/-/issues/103",
-          "milestone": { "id": 12, "iid": 1, "title": "Discovery & Design", "due_date": "2026-06-12" }
+          "milestone": { "id": 12, "iid": 1, "title": "Discovery & Design", "due_date": "2026-06-12", "web_url": "https://gitlab.com/acme/infra/-/milestones/1" },
+          "assignees": [{ "username": "dana" }, { "username": "rao" }]
         },
         {
           "iid": 104,
@@ -32,7 +33,8 @@
           "state": "opened",
           "due_date": "2026-06-18",
           "web_url": "https://gitlab.com/acme/infra/-/issues/104",
-          "milestone": { "id": 12, "iid": 1, "title": "Discovery & Design", "due_date": "2026-06-12" }
+          "milestone": { "id": 12, "iid": 1, "title": "Discovery & Design", "due_date": "2026-06-12", "web_url": "https://gitlab.com/acme/infra/-/milestones/1" },
+          "assignee": { "username": "dana" }
         },
         {
           "iid": 105,
@@ -40,7 +42,7 @@
           "state": "opened",
           "due_date": "2026-07-10",
           "web_url": "https://gitlab.com/acme/infra/-/issues/105",
-          "milestone": { "id": 13, "iid": 2, "title": "Provisioning & Config", "due_date": "2026-07-18" }
+          "milestone": { "id": 13, "iid": 2, "title": "Provisioning & Config", "due_date": "2026-07-18", "web_url": "https://gitlab.com/acme/infra/-/milestones/2" }
         },
         {
           "iid": 106,
@@ -48,7 +50,7 @@
           "state": "opened",
           "due_date": null,
           "web_url": "https://gitlab.com/acme/infra/-/issues/106",
-          "milestone": { "id": 13, "iid": 2, "title": "Provisioning & Config", "due_date": "2026-07-18" }
+          "milestone": { "id": 13, "iid": 2, "title": "Provisioning & Config", "due_date": "2026-07-18", "web_url": "https://gitlab.com/acme/infra/-/milestones/2" }
         },
         {
           "iid": 107,
