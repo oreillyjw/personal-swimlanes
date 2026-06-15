@@ -25,6 +25,11 @@ export interface ResolvedItem {
   issues: IssueLite[]; // milestone's issues, for the detail view
   overdue: boolean;
   url: string | null;
+  tags: string[];
+  /** The linked VCS ref, if any (for display + unlink). */
+  sourceRef: { provider: "gitlab" | "github"; project: string; type: "milestone" | "issue"; id: string } | null;
+  /** True when sourceRef is set but no matching data was found in the last sync. */
+  linkUnresolved: boolean;
   hasSourceRef: boolean;
 }
 
@@ -65,6 +70,8 @@ export interface ResolvedBoard {
   lastSyncAt: string | null;
   /** Unplaced milestones + issues, for the "Add to plan" panel. */
   available: { milestones: AvailableRef[]; issues: AvailableRef[] };
+  /** Every synced milestone + issue (placed or not), for the link picker. */
+  allRefs: { milestones: AvailableRef[]; issues: AvailableRef[] };
 }
 
 /** Index of synced data for fast lookup while resolving items. */
@@ -112,6 +119,7 @@ function resolveItem(item: Item, startWeek: string, todayISO: string, idx: SyncI
   let issues: IssueLite[] = [];
   let url: string | null = null;
   let liveTitle: string | null = null;
+  let resolved = false;
 
   if (item.sourceRef) {
     const base = `${item.sourceRef.provider}:${item.sourceRef.project}:${item.sourceRef.id}`;
@@ -119,6 +127,7 @@ function resolveItem(item: Item, startWeek: string, todayISO: string, idx: SyncI
       const list = idx.milestoneIssues.get(base) ?? [];
       const meta = idx.milestoneMeta.get(base);
       if (meta || list.length) {
+        resolved = true;
         const closed = list.filter((i) => i.state === "closed").length;
         progress = { closed, total: list.length };
         liveState = list.length > 0 && closed === list.length ? "closed" : "active";
@@ -128,6 +137,7 @@ function resolveItem(item: Item, startWeek: string, todayISO: string, idx: SyncI
     } else {
       const issue = idx.issueByKey.get(base);
       if (issue) {
+        resolved = true;
         liveState = issue.state === "closed" ? "closed" : "active";
         url = issue.url;
         liveTitle = issue.title;
@@ -154,12 +164,18 @@ function resolveItem(item: Item, startWeek: string, todayISO: string, idx: SyncI
     issues,
     overdue,
     url,
+    tags: item.tags ?? [],
+    sourceRef: item.sourceRef ?? null,
+    linkUnresolved: Boolean(item.sourceRef) && !resolved,
     hasSourceRef: Boolean(item.sourceRef),
   };
 }
 
-/** Build the unplaced milestones + issues available to add to the plan. */
-function buildAvailable(synced: Synced, placed: Set<string>): ResolvedBoard["available"] {
+const byProjectTitle = (a: AvailableRef, b: AvailableRef) =>
+  a.project.localeCompare(b.project) || a.title.localeCompare(b.title);
+
+/** Collect every synced milestone + issue as AvailableRefs. */
+function collectRefs(synced: Synced): { milestones: AvailableRef[]; issues: AvailableRef[] } {
   const milestones = new Map<string, AvailableRef>();
   const issues: AvailableRef[] = [];
 
@@ -169,22 +185,19 @@ function buildAvailable(synced: Synced, placed: Set<string>): ResolvedBoard["ava
     const project = srcKey.slice(idx + 1);
 
     for (const issue of src.issues) {
-      const issueKey = `${provider}:${project}:issue:${issue.number}`;
-      if (!placed.has(issueKey)) {
-        issues.push({
-          key: issueKey,
-          provider,
-          project,
-          type: "issue",
-          id: issue.number,
-          title: issue.title,
-          dueDate: issue.dueDate,
-          state: issue.state,
-        });
-      }
+      issues.push({
+        key: `${provider}:${project}:issue:${issue.number}`,
+        provider,
+        project,
+        type: "issue",
+        id: issue.number,
+        title: issue.title,
+        dueDate: issue.dueDate,
+        state: issue.state,
+      });
       if (issue.milestone) {
         const mKey = `${provider}:${project}:milestone:${issue.milestone.id}`;
-        if (!placed.has(mKey) && !milestones.has(mKey)) {
+        if (!milestones.has(mKey)) {
           milestones.set(mKey, {
             key: mKey,
             provider,
@@ -200,8 +213,6 @@ function buildAvailable(synced: Synced, placed: Set<string>): ResolvedBoard["ava
     }
   }
 
-  const byProjectTitle = (a: AvailableRef, b: AvailableRef) =>
-    a.project.localeCompare(b.project) || a.title.localeCompare(b.title);
   return {
     milestones: [...milestones.values()].sort(byProjectTitle),
     issues: issues.sort(byProjectTitle),
@@ -241,6 +252,11 @@ export function buildViewModel(board: Board, synced: Synced, today: Date = new D
       placed.add(`${it.sourceRef.provider}:${it.sourceRef.project}:${it.sourceRef.type}:${it.sourceRef.id}`);
     }
   }
+  const allRefs = collectRefs(synced);
+  const available = {
+    milestones: allRefs.milestones.filter((r) => !placed.has(r.key)),
+    issues: allRefs.issues.filter((r) => !placed.has(r.key)),
+  };
 
   return {
     name,
@@ -251,6 +267,7 @@ export function buildViewModel(board: Board, synced: Synced, today: Date = new D
     dependencies,
     todayFraction: weekFraction(startWeek, todayISO),
     lastSyncAt: synced.lastSyncAt,
-    available: buildAvailable(synced, placed),
+    available,
+    allRefs,
   };
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { Item, Lane } from "@/lib/types";
-import type { ResolvedItem, ResolvedDependency } from "@/lib/viewModel";
+import { useEffect, useMemo, useState } from "react";
+import type { Item, ItemSourceRef, Lane } from "@/lib/types";
+import type { AvailableRef, ResolvedItem, ResolvedDependency } from "@/lib/viewModel";
 
 export interface ItemRef {
   id: string;
@@ -15,6 +15,7 @@ export default function ItemDetail({
   rawItem,
   lanes,
   allItems,
+  allRefs,
   dependencies,
   onUpdate,
   onDelete,
@@ -26,6 +27,7 @@ export default function ItemDetail({
   rawItem: Item;
   lanes: Lane[];
   allItems: ItemRef[];
+  allRefs: { milestones: AvailableRef[]; issues: AvailableRef[] };
   dependencies: ResolvedDependency[];
   onUpdate: (id: string, patch: Partial<Item>) => void;
   onDelete: (id: string) => void;
@@ -45,6 +47,9 @@ export default function ItemDetail({
   const [isLaunch, setIsLaunch] = useState(Boolean(rawItem.isLaunch));
   const [depTarget, setDepTarget] = useState("");
   const [depDir, setDepDir] = useState<"after" | "before">("after");
+  const [tagDraft, setTagDraft] = useState("");
+  const [linking, setLinking] = useState(false);
+  const [linkFilter, setLinkFilter] = useState("");
 
   const lane = lanes.find((l) => l.id === item.laneId);
   const progress = item.progress;
@@ -61,6 +66,39 @@ export default function ItemDetail({
     if (depDir === "after") onAddDependency(depTarget, item.id); // target must finish before this
     else onAddDependency(item.id, depTarget); // this must finish before target
     setDepTarget("");
+  }
+
+  // --- Tags (local-only) ---
+  const tags = rawItem.tags ?? [];
+  function addTag() {
+    const t = tagDraft.trim();
+    if (!t || tags.includes(t)) {
+      setTagDraft("");
+      return;
+    }
+    onUpdate(item.id, { tags: [...tags, t] });
+    setTagDraft("");
+  }
+  function removeTag(t: string) {
+    onUpdate(item.id, { tags: tags.filter((x) => x !== t) });
+  }
+
+  // --- Link to a VCS issue / milestone ---
+  const candidates = useMemo(() => {
+    const all = [...allRefs.issues, ...allRefs.milestones];
+    const q = linkFilter.trim().toLowerCase();
+    const filtered = q ? all.filter((r) => r.title.toLowerCase().includes(q) || r.project.toLowerCase().includes(q) || r.id.includes(q)) : all;
+    return filtered.slice(0, 50);
+  }, [allRefs, linkFilter]);
+
+  function linkTo(ref: AvailableRef) {
+    const sourceRef: ItemSourceRef = { provider: ref.provider, project: ref.project, type: ref.type, id: ref.id };
+    onUpdate(item.id, { sourceRef });
+    setLinking(false);
+    setLinkFilter("");
+  }
+  function unlink() {
+    onUpdate(item.id, { sourceRef: null });
   }
 
   return (
@@ -94,6 +132,82 @@ export default function ItemDetail({
               </a>
             )}
           </div>
+
+          {/* Link to a VCS issue / milestone */}
+          <section className="space-y-2 rounded-lg border border-slate-200 p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Linked VCS item</span>
+              {item.sourceRef ? (
+                <button onClick={unlink} className="text-xs text-rose-500 hover:underline">Unlink</button>
+              ) : (
+                <button onClick={() => setLinking((v) => !v)} className="text-xs text-slate-600 hover:underline">
+                  {linking ? "Cancel" : "Link…"}
+                </button>
+              )}
+            </div>
+            {item.sourceRef ? (
+              <div className="text-xs text-slate-600">
+                <span className="font-mono">{item.sourceRef.provider}:{item.sourceRef.project}</span>{" "}
+                · {item.sourceRef.type} #{item.sourceRef.id}
+                {item.linkUnresolved && <span className="ml-1 text-rose-500">⚠ not found in last sync</span>}
+                <button onClick={() => setLinking((v) => !v)} className="ml-2 text-slate-500 hover:underline">change</button>
+              </div>
+            ) : (
+              !linking && <p className="text-xs text-slate-400">Not linked — this is a plan-only item.</p>
+            )}
+            {linking && (
+              <div className="space-y-1">
+                <input
+                  value={linkFilter}
+                  onChange={(e) => setLinkFilter(e.target.value)}
+                  placeholder="Filter issues / milestones…"
+                  className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+                />
+                <ul className="max-h-44 divide-y divide-slate-100 overflow-y-auto rounded border border-slate-100">
+                  {candidates.length === 0 ? (
+                    <li className="px-2 py-2 text-xs text-slate-400">No matches — run Sync now first.</li>
+                  ) : (
+                    candidates.map((ref) => (
+                      <li key={ref.key}>
+                        <button onClick={() => linkTo(ref)} className="flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-xs hover:bg-slate-50">
+                          <span className="rounded bg-slate-100 px-1 text-[9px] uppercase text-slate-500">{ref.type}</span>
+                          <span className="flex-1 truncate" title={`${ref.project} · ${ref.title}`}>
+                            <span className="text-slate-400">{ref.project}</span> #{ref.id} {ref.title}
+                          </span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+            )}
+          </section>
+
+          {/* Tags (local-only) */}
+          <section className="space-y-2 rounded-lg border border-slate-200 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Tags <span className="font-normal normal-case text-slate-400">(local)</span></div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {tags.map((t) => (
+                <span key={t} className="flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-xs text-indigo-700">
+                  {t}
+                  <button onClick={() => removeTag(t)} className="text-indigo-400 hover:text-rose-500" aria-label={`Remove ${t}`}>✕</button>
+                </span>
+              ))}
+              {tags.length === 0 && <span className="text-xs text-slate-400">No tags yet.</span>}
+            </div>
+            <input
+              value={tagDraft}
+              onChange={(e) => setTagDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault();
+                  addTag();
+                }
+              }}
+              placeholder="Add a tag and press Enter"
+              className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+            />
+          </section>
 
           {/* Edit fields */}
           <section className="space-y-2 rounded-lg border border-slate-200 p-3">

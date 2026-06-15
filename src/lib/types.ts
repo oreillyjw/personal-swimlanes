@@ -49,6 +49,8 @@ export const itemSchema = z.object({
   targetDate: z.string(),
   isLaunch: z.boolean().optional().default(false),
   detail: z.string().optional().default(""),
+  /** Local-only labels (not synced to the VCS). */
+  tags: z.array(z.string()).default([]),
   /** Link for live status/progress; null = plan-only item. */
   sourceRef: itemSourceRefSchema.nullable().optional(),
 });

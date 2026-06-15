@@ -27,6 +27,7 @@
       "kind": "issue",
       "title": "Capacity model for target environment",
       "targetDate": "2026-06-19",
+      "tags": ["risk", "blocker"],
       "sourceRef": { "provider": "gitlab", "project": "acme/infra", "type": "issue", "id": "103" }
     },
     {

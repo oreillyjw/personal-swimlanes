@@ -65,12 +65,21 @@ export default function ItemCard({
           {m.title}
         </div>
         {!compact && (
-          <div className="mt-1 flex items-center gap-1">
+          <div className="mt-1 flex flex-wrap items-center gap-1">
             <span className={`text-[10px] font-medium ${m.overdue ? "text-rose-500" : "text-slate-500"}`}>
               {m.overdue && "⚠ "}
               {m.dateLabel}
             </span>
             <span className={`rounded px-1 py-px text-[9px] font-semibold ${statusClasses(m.status)}`}>{m.status}</span>
+            {m.sourceRef && (
+              <span className={m.linkUnresolved ? "text-rose-400" : "text-slate-400"} title={m.linkUnresolved ? "Linked ref not found in last sync" : "Linked to VCS"}>
+                🔗
+              </span>
+            )}
+            {m.tags.slice(0, 2).map((t) => (
+              <span key={t} className="rounded bg-indigo-50 px-1 py-px text-[9px] font-medium text-indigo-600">{t}</span>
+            ))}
+            {m.tags.length > 2 && <span className="text-[9px] text-slate-400">+{m.tags.length - 2}</span>}
           </div>
         )}
       </div>

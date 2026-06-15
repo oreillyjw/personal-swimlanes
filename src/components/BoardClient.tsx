@@ -185,6 +185,7 @@ export default function BoardClient({ board, rawBoard, simulated }: { board: Res
           rawItem={selectedRaw}
           lanes={rawBoard.lanes}
           allItems={allItemRefs}
+          allRefs={board.allRefs}
           dependencies={board.dependencies.filter((d) => d.from === selected.id || d.to === selected.id)}
           onUpdate={updateItem}
           onDelete={deleteItem}

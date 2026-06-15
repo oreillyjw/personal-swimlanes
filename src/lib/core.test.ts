@@ -92,6 +92,36 @@ describe("buildViewModel (planner)", () => {
     expect(vm.dependencies).toEqual([{ from: "m1", to: "x1", slip: true }]); // 06-26 > 06-15
   });
 
+  it("surfaces local tags and the linked sourceRef on resolved items", () => {
+    const b = boardSchema.parse({
+      board: { name: "T", startWeek: "2026-06-08", horizonWeeks: 8 },
+      sources: [{ provider: "gitlab", project: "acme/infra" }],
+      lanes: [{ id: "a", title: "A", color: "#1E5BB8" }],
+      items: [
+        // plan-only item linked to issue 103, with tags
+        { id: "p1", laneId: "a", kind: "issue", title: "Plan", targetDate: "2026-06-20", tags: ["risk", "q3"], sourceRef: { provider: "gitlab", project: "acme/infra", type: "issue", id: "103" } },
+        // linked to a ref that isn't in the sync -> unresolved
+        { id: "p2", laneId: "a", kind: "issue", title: "Ghost", targetDate: "2026-06-20", sourceRef: { provider: "gitlab", project: "acme/infra", type: "issue", id: "999" } },
+      ],
+      dependencies: [],
+    });
+    const vm = buildViewModel(b, synced, parseDay("2026-06-14"));
+    const items = vm.lanes[0].items;
+    const p1 = items.find((i) => i.id === "p1")!;
+    expect(p1.tags).toEqual(["risk", "q3"]);
+    expect(p1.sourceRef).toEqual({ provider: "gitlab", project: "acme/infra", type: "issue", id: "103" });
+    expect(p1.title).toBe("Capacity model"); // live title resolved via link
+    expect(p1.linkUnresolved).toBe(false);
+    const p2 = items.find((i) => i.id === "p2")!;
+    expect(p2.linkUnresolved).toBe(true);
+  });
+
+  it("exposes allRefs (every synced ref) for the link picker", () => {
+    const ids = vm.allRefs.issues.map((i) => i.id);
+    expect(ids).toContain("101");
+    expect(ids).toContain("103"); // present in allRefs even though it's placed
+  });
+
   it("offers unplaced refs in available, excluding placed ones", () => {
     // milestone 12 is placed (m1) -> not offered; issue 103 placed (i1) -> not offered
     expect(vm.available.milestones.map((m) => m.id)).not.toContain("12");

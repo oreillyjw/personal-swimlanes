@@ -52,8 +52,10 @@ and the **Add to plan** / **Edit board** controls.
 - **Add to plan** — lists milestones & issues discovered from the last sync that
   aren't placed yet; add one to a lane (date defaults to its VCS due date).
 - **Click an item** to edit its **target date**, **lane**, **title**, mark it a
-  **launch**, or **remove** it — and to add/remove **dependencies** (this item
-  *needs* or *blocks* another).
+  **launch**, or **remove** it; add/remove **dependencies** (this item *needs* or
+  *blocks* another); edit local **tags**; and **link** it to the GitLab/GitHub
+  issue or milestone it corresponds to (a plan-only item gains live status + a
+  deep link, or **unlink** to make it plan-only again).
 - **Edit board** — board name, start week + horizon, and add/rename/recolor/
   delete swimlanes and sources.
 
@@ -107,7 +109,7 @@ right instance automatically.
   "lanes":   [ { "id": "ai", "title": "AI Engine", "color": "#6A1B9A" } ],
   "items": [
     { "id": "ai-m6", "laneId": "ai", "kind": "milestone", "title": "Engine v2",
-      "targetDate": "2026-08-31", "isLaunch": true,
+      "targetDate": "2026-08-31", "isLaunch": true, "tags": ["q3", "risk"],
       "sourceRef": { "provider":"github", "project":"owner/repo", "type":"milestone", "id":"6" } }
   ],
   "dependencies": [ { "from": "ai-m6", "to": "billing-m2" } ]   // from must finish before to

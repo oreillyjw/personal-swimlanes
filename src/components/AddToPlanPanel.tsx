@@ -38,6 +38,7 @@ export default function AddToPlanPanel({
       targetDate: ref.dueDate ?? today,
       isLaunch: false,
       detail: "",
+      tags: [],
       sourceRef: { provider: ref.provider, project: ref.project, type: ref.type, id: ref.id },
     });
   }
