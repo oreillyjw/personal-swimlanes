@@ -1,34 +1,71 @@
 {
   "board": {
     "name": "Launch Tracker",
-    "currentWindowWeeks": 2
+    "startWeek": "2026-06-08",
+    "horizonWeeks": 16
   },
   "sources": [
     { "provider": "gitlab", "project": "acme/infra" },
     { "provider": "github", "project": "acme/platform" }
   ],
-  "swimlanes": [
+  "lanes": [
+    { "id": "infra", "title": "Infrastructure", "color": "#1E5BB8" },
+    { "id": "platform", "title": "Platform", "color": "#2E7D32" }
+  ],
+  "items": [
     {
-      "id": "infra",
-      "title": "INFRASTRUCTURE CUTOVER",
-      "color": "#1E5BB8",
-      "milestones": [
-        { "provider": "gitlab", "project": "acme/infra", "id": "12" },
-        { "provider": "gitlab", "project": "acme/infra", "id": "13" }
-      ]
+      "id": "infra-m12",
+      "laneId": "infra",
+      "kind": "milestone",
+      "title": "Discovery & Design",
+      "targetDate": "2026-06-26",
+      "sourceRef": { "provider": "gitlab", "project": "acme/infra", "type": "milestone", "id": "12" }
     },
     {
-      "id": "platform",
-      "title": "PLATFORM MIGRATION",
-      "color": "#2E7D32",
-      "milestones": [
-        { "provider": "github", "project": "acme/platform", "id": "1" },
-        { "provider": "github", "project": "acme/platform", "id": "2" }
-      ]
+      "id": "infra-i103",
+      "laneId": "infra",
+      "kind": "issue",
+      "title": "Capacity model for target environment",
+      "targetDate": "2026-06-19",
+      "sourceRef": { "provider": "gitlab", "project": "acme/infra", "type": "issue", "id": "103" }
+    },
+    {
+      "id": "infra-m13",
+      "laneId": "infra",
+      "kind": "milestone",
+      "title": "Provisioning & Config",
+      "targetDate": "2026-07-17",
+      "sourceRef": { "provider": "gitlab", "project": "acme/infra", "type": "milestone", "id": "13" }
+    },
+    {
+      "id": "infra-launch",
+      "laneId": "infra",
+      "kind": "milestone",
+      "title": "Infra Cutover",
+      "targetDate": "2026-08-21",
+      "isLaunch": true,
+      "detail": "Production cutover to the new environment"
+    },
+    {
+      "id": "plat-m1",
+      "laneId": "platform",
+      "kind": "milestone",
+      "title": "Requirements & Data Mapping",
+      "targetDate": "2026-07-03",
+      "sourceRef": { "provider": "github", "project": "acme/platform", "type": "milestone", "id": "1" }
+    },
+    {
+      "id": "plat-m2",
+      "laneId": "platform",
+      "kind": "milestone",
+      "title": "Build & Integration",
+      "targetDate": "2026-08-07",
+      "sourceRef": { "provider": "github", "project": "acme/platform", "type": "milestone", "id": "2" }
     }
   ],
-  "issueState": {
-    "gitlab:acme/infra:104": { "pinned": true },
-    "gitlab:acme/infra:108": { "hidden": true }
-  }
+  "dependencies": [
+    { "from": "infra-m12", "to": "plat-m1" },
+    { "from": "plat-m1", "to": "plat-m2" },
+    { "from": "plat-m2", "to": "infra-launch" }
+  ]
 }

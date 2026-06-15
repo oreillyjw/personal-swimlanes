@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const [board, synced] = await Promise.all([store.getBoard(), store.getSynced()]);
   // Build with hidden tiles included; the client toggles their visibility.
-  const vm = buildViewModel(board, synced, new Date(), { showHidden: true });
+  const vm = buildViewModel(board, synced, new Date());
 
   return <BoardClient board={vm} rawBoard={board} simulated={isSimulated()} />;
 }

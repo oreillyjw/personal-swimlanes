@@ -1,200 +1,256 @@
-import type { Board, Synced } from "./types";
-import { issueKey, refKey } from "./refKey";
-import { formatMonthDay } from "./weeks";
-import { bucketFor, currentWindow, isOverdue, type Bucket } from "./bucket";
+import type { Board, Item, Synced, SyncedIssue } from "./types";
+import { buildWeeks, formatMonthDay, toISODate, weekFraction, type Week } from "./weeks";
 
-/** A single issue rendered as a tile in one column of a swimlane. */
-export interface Tile {
-  key: string; // provider:project:number — stable id for overrides
-  number: string;
-  title: string; // override title if set, else live title
-  liveTitle: string; // the original VCS title
-  titleOverridden: boolean;
-  note: string | null; // local-only note
-  date: string | null; // ISO
-  dateLabel: string; // "Jun 8" or "No date"
-  state: "open" | "closed";
-  bucket: Bucket;
-  overdue: boolean;
-  milestoneTitle: string | null;
-  url: string;
-  pinned: boolean;
-  hidden: boolean;
-  laneOverridden: boolean; // placed by a local laneId, not its milestone
-}
-
-/** A milestone discovered in the synced issues, with its current lane mapping. */
-export interface DiscoveredMilestone {
-  key: string; // refKey(provider:project:id)
-  provider: string;
-  project: string;
-  id: string;
+export interface IssueLite {
   title: string;
-  laneId: string | null; // currently mapped swimlane, or null (Catch-all)
+  state: string;
+  url: string;
 }
 
-export interface ResolvedSwimlane {
+/** A planned item resolved with live status from the synced cache. */
+export interface ResolvedItem {
+  id: string;
+  laneId: string;
+  kind: "milestone" | "issue";
+  title: string; // live title if linked, else the planned title
+  detail: string;
+  isLaunch: boolean;
+  targetDate: string | null;
+  dateLabel: string;
+  weekFraction: number | null;
+  /** Display status: "Done" | "In Progress" | "To Do" | "Planned". */
+  status: string;
+  liveState: "active" | "closed" | null;
+  progress: { closed: number; total: number } | null; // milestones only
+  issues: IssueLite[]; // milestone's issues, for the detail view
+  overdue: boolean;
+  url: string | null;
+  hasSourceRef: boolean;
+}
+
+export interface ResolvedLane {
   id: string;
   title: string;
   color: string;
-  isCatchAll: boolean;
-  past: Tile[];
-  current: Tile[];
-  future: Tile[];
-  /** Visible tile count across all columns. */
-  count: number;
+  items: ResolvedItem[];
+}
+
+/** A milestone/issue from the sync that is not yet placed on the plan. */
+export interface AvailableRef {
+  key: string; // provider:project:type:id
+  provider: "gitlab" | "github";
+  project: string;
+  type: "milestone" | "issue";
+  id: string;
+  title: string;
+  dueDate: string | null;
+  state: "open" | "closed" | "mixed";
+}
+
+export interface ResolvedDependency {
+  from: string;
+  to: string;
+  /** Prerequisite is planned to finish after the dependent — ordering violated. */
+  slip: boolean;
 }
 
 export interface ResolvedBoard {
   name: string;
-  swimlanes: ResolvedSwimlane[];
-  discoveredMilestones: DiscoveredMilestone[];
+  startWeek: string;
+  horizonWeeks: number;
+  weeks: Week[];
+  lanes: ResolvedLane[];
+  dependencies: ResolvedDependency[];
+  todayFraction: number;
   lastSyncAt: string | null;
-  counts: { shown: number; hidden: number; total: number };
+  /** Unplaced milestones + issues, for the "Add to plan" panel. */
+  available: { milestones: AvailableRef[]; issues: AvailableRef[] };
 }
 
-export const CATCH_ALL_ID = "__catch_all__";
-
-/** Split a "provider:project" source key back into its parts. */
-function splitSourceKey(key: string): { provider: string; project: string } {
-  const idx = key.indexOf(":");
-  return { provider: key.slice(0, idx), project: key.slice(idx + 1) };
+/** Index of synced data for fast lookup while resolving items. */
+interface SyncIndex {
+  /** key provider:project:number -> issue */
+  issueByKey: Map<string, SyncedIssue>;
+  /** key provider:project:milestoneId -> issues in that milestone */
+  milestoneIssues: Map<string, SyncedIssue[]>;
+  /** key provider:project:milestoneId -> {title, dueDate} */
+  milestoneMeta: Map<string, { title: string; dueDate: string | null }>;
 }
 
-/** Pinned first, then by date (undated last), then title. */
-function sortTiles(tiles: Tile[]): void {
-  tiles.sort((a, b) => {
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-    if (a.date && b.date) return a.date < b.date ? -1 : a.date > b.date ? 1 : a.title.localeCompare(b.title);
-    if (a.date) return -1;
-    if (b.date) return 1;
-    return a.title.localeCompare(b.title);
-  });
-}
-
-/**
- * Build the render-ready board: every synced issue placed into a swimlane (by its
- * native milestone → swimlane map, else Catch-all) and a Past/Current/Future
- * column (by state + date). Local hide/pin from board.issueState is applied.
- */
-export function buildViewModel(
-  board: Board,
-  synced: Synced,
-  today: Date = new Date(),
-  opts: { showHidden?: boolean } = {}
-): ResolvedBoard {
-  const showHidden = opts.showHidden ?? false;
-  const window = currentWindow(today, board.board.currentWindowWeeks);
-
-  // milestone refKey -> swimlane id
-  const milestoneToLane = new Map<string, string>();
-  for (const lane of board.swimlanes) {
-    for (const ref of lane.milestones) milestoneToLane.set(refKey(ref), lane.id);
-  }
-
-  // Init a bucket-holder per configured swimlane, plus the synthetic catch-all.
-  const make = (id: string, title: string, color: string, isCatchAll: boolean): ResolvedSwimlane => ({
-    id,
-    title,
-    color,
-    isCatchAll,
-    past: [],
-    current: [],
-    future: [],
-    count: 0,
-  });
-  const lanes = new Map<string, ResolvedSwimlane>();
-  for (const l of board.swimlanes) lanes.set(l.id, make(l.id, l.title, l.color, false));
-  const catchAll = make(CATCH_ALL_ID, "Catch-all", "#64748b", true);
-
-  let hidden = 0;
-  let shown = 0;
-  let total = 0;
-
-  // Discovered milestones (from synced issues) keyed by refKey, with current lane.
-  const discovered = new Map<string, DiscoveredMilestone>();
+function buildIndex(synced: Synced): SyncIndex {
+  const issueByKey = new Map<string, SyncedIssue>();
+  const milestoneIssues = new Map<string, SyncedIssue[]>();
+  const milestoneMeta = new Map<string, { title: string; dueDate: string | null }>();
 
   for (const [srcKey, src] of Object.entries(synced.sources)) {
-    const { provider, project } = splitSourceKey(srcKey);
     for (const issue of src.issues) {
-      total++;
-
-      const mRefKey = issue.milestone
-        ? refKey({ provider: provider as "gitlab" | "github", project, id: issue.milestone.id })
-        : null;
-      if (mRefKey && issue.milestone && !discovered.has(mRefKey)) {
-        discovered.set(mRefKey, {
-          key: mRefKey,
-          provider,
-          project,
-          id: issue.milestone.id,
-          title: issue.milestone.title,
-          laneId: milestoneToLane.get(mRefKey) ?? null,
-        });
+      issueByKey.set(`${srcKey}:${issue.number}`, issue);
+      if (issue.milestone) {
+        const mKey = `${srcKey}:${issue.milestone.id}`;
+        const arr = milestoneIssues.get(mKey) ?? [];
+        arr.push(issue);
+        milestoneIssues.set(mKey, arr);
+        if (!milestoneMeta.has(mKey)) {
+          milestoneMeta.set(mKey, { title: issue.milestone.title, dueDate: issue.milestone.dueDate });
+        }
       }
+    }
+  }
+  return { issueByKey, milestoneIssues, milestoneMeta };
+}
 
-      const key = issueKey(provider, project, issue.number);
-      const override = board.issueState[key];
-      const isHidden = override?.hidden ?? false;
-      const isPinned = override?.pinned ?? false;
-      if (isHidden) {
-        hidden++;
-        if (!showHidden) continue;
-      } else {
-        shown++;
+function statusFor(liveState: "active" | "closed" | null, progress: { closed: number; total: number } | null): string {
+  if (liveState === "closed") return "Done";
+  if (progress && progress.closed > 0 && progress.closed < progress.total) return "In Progress";
+  if (liveState === "active") return "To Do";
+  return "Planned";
+}
+
+function resolveItem(item: Item, startWeek: string, todayISO: string, idx: SyncIndex): ResolvedItem {
+  let liveState: "active" | "closed" | null = null;
+  let progress: { closed: number; total: number } | null = null;
+  let issues: IssueLite[] = [];
+  let url: string | null = null;
+  let liveTitle: string | null = null;
+
+  if (item.sourceRef) {
+    const base = `${item.sourceRef.provider}:${item.sourceRef.project}:${item.sourceRef.id}`;
+    if (item.sourceRef.type === "milestone") {
+      const list = idx.milestoneIssues.get(base) ?? [];
+      const meta = idx.milestoneMeta.get(base);
+      if (meta || list.length) {
+        const closed = list.filter((i) => i.state === "closed").length;
+        progress = { closed, total: list.length };
+        liveState = list.length > 0 && closed === list.length ? "closed" : "active";
+        issues = list.map((i) => ({ title: i.title, state: i.state, url: i.url }));
+        liveTitle = meta?.title ?? null;
       }
-
-      // Lane: explicit local override wins; else the milestone map; else Catch-all.
-      const milestoneLaneId = mRefKey ? milestoneToLane.get(mRefKey) : undefined;
-      const overrideLaneId = override?.laneId ?? null;
-      const laneOverridden = overrideLaneId != null;
-      const targetLaneId = overrideLaneId ?? milestoneLaneId;
-      const lane = (targetLaneId && lanes.get(targetLaneId)) || catchAll;
-
-      const bucket = bucketFor(issue, window);
-      const tile: Tile = {
-        key,
-        number: issue.number,
-        title: override?.title || issue.title,
-        liveTitle: issue.title,
-        titleOverridden: Boolean(override?.title),
-        note: override?.note ?? null,
-        date: issue.dueDate,
-        dateLabel: issue.dueDate ? formatMonthDay(issue.dueDate) : "No date",
-        state: issue.state,
-        bucket,
-        overdue: isOverdue(issue, window),
-        milestoneTitle: issue.milestone?.title ?? null,
-        url: issue.url,
-        pinned: isPinned,
-        hidden: isHidden,
-        laneOverridden,
-      };
-      lane[bucket].push(tile);
+    } else {
+      const issue = idx.issueByKey.get(base);
+      if (issue) {
+        liveState = issue.state === "closed" ? "closed" : "active";
+        url = issue.url;
+        liveTitle = issue.title;
+      }
     }
   }
 
-  const finalize = (l: ResolvedSwimlane): ResolvedSwimlane => {
-    sortTiles(l.past);
-    sortTiles(l.current);
-    sortTiles(l.future);
-    l.count = l.past.length + l.current.length + l.future.length;
-    return l;
-  };
-
-  const swimlanes = board.swimlanes.map((l) => finalize(lanes.get(l.id)!));
-  finalize(catchAll);
-  if (catchAll.count > 0) swimlanes.push(catchAll);
-
-  const discoveredMilestones = [...discovered.values()].sort(
-    (a, b) => a.project.localeCompare(b.project) || a.title.localeCompare(b.title)
-  );
+  const targetDate = item.targetDate ?? null;
+  const overdue = Boolean(targetDate && targetDate < todayISO && liveState !== "closed");
 
   return {
-    name: board.board.name,
-    swimlanes,
-    discoveredMilestones,
+    id: item.id,
+    laneId: item.laneId,
+    kind: item.kind,
+    title: liveTitle || item.title,
+    detail: item.detail ?? "",
+    isLaunch: item.isLaunch ?? false,
+    targetDate,
+    dateLabel: targetDate ? formatMonthDay(targetDate) : "no date",
+    weekFraction: targetDate ? weekFraction(startWeek, targetDate) : null,
+    status: statusFor(liveState, progress),
+    liveState,
+    progress,
+    issues,
+    overdue,
+    url,
+    hasSourceRef: Boolean(item.sourceRef),
+  };
+}
+
+/** Build the unplaced milestones + issues available to add to the plan. */
+function buildAvailable(synced: Synced, placed: Set<string>): ResolvedBoard["available"] {
+  const milestones = new Map<string, AvailableRef>();
+  const issues: AvailableRef[] = [];
+
+  for (const [srcKey, src] of Object.entries(synced.sources)) {
+    const idx = srcKey.indexOf(":");
+    const provider = srcKey.slice(0, idx) as "gitlab" | "github";
+    const project = srcKey.slice(idx + 1);
+
+    for (const issue of src.issues) {
+      const issueKey = `${provider}:${project}:issue:${issue.number}`;
+      if (!placed.has(issueKey)) {
+        issues.push({
+          key: issueKey,
+          provider,
+          project,
+          type: "issue",
+          id: issue.number,
+          title: issue.title,
+          dueDate: issue.dueDate,
+          state: issue.state,
+        });
+      }
+      if (issue.milestone) {
+        const mKey = `${provider}:${project}:milestone:${issue.milestone.id}`;
+        if (!placed.has(mKey) && !milestones.has(mKey)) {
+          milestones.set(mKey, {
+            key: mKey,
+            provider,
+            project,
+            type: "milestone",
+            id: issue.milestone.id,
+            title: issue.milestone.title,
+            dueDate: issue.milestone.dueDate,
+            state: "mixed",
+          });
+        }
+      }
+    }
+  }
+
+  const byProjectTitle = (a: AvailableRef, b: AvailableRef) =>
+    a.project.localeCompare(b.project) || a.title.localeCompare(b.title);
+  return {
+    milestones: [...milestones.values()].sort(byProjectTitle),
+    issues: issues.sort(byProjectTitle),
+  };
+}
+
+/** Merge board (the plan) + synced (live state) into a render-ready timeline. */
+export function buildViewModel(board: Board, synced: Synced, today: Date = new Date()): ResolvedBoard {
+  const { startWeek, horizonWeeks, name } = board.board;
+  const todayISO = toISODate(today);
+  const weeks = buildWeeks(startWeek, horizonWeeks);
+  const idx = buildIndex(synced);
+
+  const itemById = new Map<string, Item>();
+  for (const it of board.items) itemById.set(it.id, it);
+
+  const lanes: ResolvedLane[] = board.lanes.map((lane) => ({
+    id: lane.id,
+    title: lane.title,
+    color: lane.color,
+    items: board.items
+      .filter((it) => it.laneId === lane.id)
+      .map((it) => resolveItem(it, startWeek, todayISO, idx)),
+  }));
+
+  const dependencies: ResolvedDependency[] = board.dependencies.map((dep) => {
+    const from = itemById.get(dep.from);
+    const to = itemById.get(dep.to);
+    const slip = Boolean(from?.targetDate && to?.targetDate && from.targetDate > to.targetDate);
+    return { from: dep.from, to: dep.to, slip };
+  });
+
+  // Refs already placed (so the Add panel doesn't offer them again).
+  const placed = new Set<string>();
+  for (const it of board.items) {
+    if (it.sourceRef) {
+      placed.add(`${it.sourceRef.provider}:${it.sourceRef.project}:${it.sourceRef.type}:${it.sourceRef.id}`);
+    }
+  }
+
+  return {
+    name,
+    startWeek,
+    horizonWeeks,
+    weeks,
+    lanes,
+    dependencies,
+    todayFraction: weekFraction(startWeek, todayISO),
     lastSyncAt: synced.lastSyncAt,
-    counts: { shown, hidden, total },
+    available: buildAvailable(synced, placed),
   };
 }

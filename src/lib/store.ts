@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { boardSchema, syncedSchema, type Board, type IssueOverride, type Synced } from "./types";
+import { boardSchema, syncedSchema, type Board, type Synced } from "./types";
+import { isMonday } from "./weeks";
 
 /**
  * All disk access goes through this interface. To move storage elsewhere later
@@ -11,9 +12,7 @@ export interface Store {
   getBoard(): Promise<Board>;
   getSynced(): Promise<Synced>;
   writeSynced(synced: Synced): Promise<void>;
-  /** Local-only: merge per-issue override (hide/pin/lane/title/note) into board.json. */
-  setIssueState(key: string, patch: Partial<IssueOverride>): Promise<Board>;
-  /** Local-only: replace the board config (structure edits) in board.json. */
+  /** Local-only: replace the board/plan config in board.json. */
   writeBoard(board: Board): Promise<Board>;
 }
 
@@ -47,6 +46,13 @@ async function atomicWriteJson(filePath: string, data: unknown): Promise<void> {
   await fs.rename(tmp, filePath);
 }
 
+function validateBoard(board: Board, source: string): Board {
+  if (!isMonday(board.board.startWeek)) {
+    throw new Error(`board.startWeek (${board.board.startWeek}) must be a Monday (${source}).`);
+  }
+  return board;
+}
+
 export class JsonFileStore implements Store {
   async getBoard(): Promise<Board> {
     // Prefer the working board.json; fall back to the committed example so a
@@ -74,7 +80,7 @@ export class JsonFileStore implements Store {
     if (!result.success) {
       throw new Error(`Board config failed validation (${target}):\n${result.error.toString()}`);
     }
-    return result.data;
+    return validateBoard(result.data, target);
   }
 
   async getSynced(): Promise<Synced> {
@@ -93,19 +99,8 @@ export class JsonFileStore implements Store {
     await atomicWriteJson(SYNCED_FILE, synced);
   }
 
-  async setIssueState(key: string, patch: Partial<IssueOverride>): Promise<Board> {
-    // Read the effective board (board.json, or the example on a fresh clone),
-    // merge the override, and write to board.json — never back to the VCS.
-    const board = await this.getBoard();
-    const current = board.issueState[key] ?? { hidden: false, pinned: false };
-    board.issueState[key] = { ...current, ...patch };
-    await atomicWriteJson(BOARD_FILE, board);
-    return board;
-  }
-
   async writeBoard(board: Board): Promise<Board> {
-    // Validate before writing so a malformed structure edit can't corrupt the file.
-    const validated = boardSchema.parse(board);
+    const validated = validateBoard(boardSchema.parse(board), "PUT");
     await atomicWriteJson(BOARD_FILE, validated);
     return validated;
   }
